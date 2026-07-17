@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <title>Payment confirmed | 3DNow</title>
+  <style>
+    :root { --bg: #f6f4ef; --surface: #fff; --text: #16191d; --muted: #545049; --border: rgba(28, 24, 18, .13); --accent: #0f766e; --accent-soft: rgba(15, 118, 110, .1); }
+    * { box-sizing: border-box; }
+    body { display: grid; min-height: 100vh; place-items: center; margin: 0; padding: 24px; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+    main { width: min(100%, 640px); }
+    .card { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 20px 48px rgba(28, 24, 18, .1); padding: 48px; text-align: center; }
+    .mark { display: grid; width: 48px; height: 48px; place-items: center; margin: 0 auto 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-family: "Space Grotesk", system-ui, sans-serif; font-size: 28px; font-weight: 700; }
+    .eyebrow { margin: 0; color: var(--accent); font-family: "Space Grotesk", system-ui, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+    h1 { margin: 12px 0 0; font-family: "Space Grotesk", system-ui, sans-serif; font-size: clamp(34px, 5vw, 48px); letter-spacing: -.04em; line-height: 1.08; }
+    .message { margin: 16px auto 0; color: var(--muted); font-size: 17px; line-height: 1.6; }
+    .details { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 24px; text-align: left; }
+    .details strong { font-family: "Space Grotesk", system-ui, sans-serif; font-size: 18px; }
+    ol { margin: 14px 0 0; padding-left: 24px; color: var(--muted); line-height: 1.8; }
+    a { display: inline-flex; margin-top: 32px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; padding: 12px 20px; text-decoration: none; }
+    a:hover { background: #0c6258; }
+    a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    @media (max-width: 560px) { .card { padding: 32px 24px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card" aria-labelledby="payment-title">
+      <span class="mark" id="payment-mark" aria-hidden="true">✓</span>
+      <p class="eyebrow" id="payment-eyebrow">Payment confirmed</p>
+      <h1 id="payment-title">Your print order is confirmed.</h1>
+      <p class="message" id="payment-message">Thank you. We have received your payment and will email your order confirmation shortly.</p>
+      <div class="details">
+        <strong id="details-title">What happens next</strong>
+        <ol id="details-list">
+          <li>We verify your file for production.</li>
+          <li>We prepare your print and delivery details.</li>
+          <li>We contact you with the next update.</li>
+        </ol>
+      </div>
+      <a href="/" id="return-link">Return to 3DNow</a>
+    </section>
+  </main>
+  <script>
+    if (window.location.pathname.endsWith('/payment-cancelled')) {
+      document.title = 'Payment cancelled | 3DNow';
+      document.querySelector('#payment-mark').textContent = 'i';
+      document.querySelector('#payment-eyebrow').textContent = 'Payment cancelled';
+      document.querySelector('#payment-title').textContent = 'Your payment was not completed.';
+      document.querySelector('#payment-message').textContent = 'No payment was taken. Return to the quote engine whenever you are ready to complete your order.';
+      document.querySelector('#details-title').textContent = 'Your quote is still available';
+      document.querySelector('#details-list').innerHTML = '<li>Return to the quote engine.</li><li>Review your print details.</li><li>Complete secure payment when ready.</li>';
+      const link = document.querySelector('#return-link');
+      link.href = '/quote-engine';
+      link.textContent = 'Return to quote engine';
+    }
+  </script>
+</body>
+</html>

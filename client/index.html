@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="description" content="Upload a printable 3D file to receive a student print quote."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <title>3DNow Student 3D Print Quote Engine</title>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="/" aria-label="3dnow.eu home"><span class="brand-stack"><img class="brand-logo" src="/brand-logo" alt="3dnow.eu"><span class="brand-tagline">by iFactory3D</span></span></a>
+        <div class="navlinks">
+          <div class="dropdown">
+            <button class="navlink" id="services-menu-button" type="button" aria-expanded="false" aria-controls="services-menu">Services</button>
+            <div class="dropdown-menu" id="services-menu">
+              <a class="dd-item" href="/quote-engine-students"><span class="t">For Students</span><span class="d">Flat-rate packages, upload &amp; go</span></a>
+              <a class="dd-item" href="/quote-engine-business"><span class="t">For Businesses &amp; Startups</span><span class="d">Custom quotes, prototype to 1,000+</span></a>
+              <a class="dd-item" href="/quote-engine-private"><span class="t">For Private Customers</span><span class="d">Parts, gifts, hobby &amp; custom</span></a>
+              <a class="dd-item" href="/#fileservice"><span class="t">No 3D file? We design it</span><span class="d">Send a photo or sketch, we create the model</span></a>
+            </div>
+          </div>
+          <a class="navlink" href="/#materials">Materials</a>
+          <a class="navlink" href="/#applications">Applications</a>
+          <a class="navlink" href="/#how">How it works</a>
+          <a class="navlink" href="/#about">About us</a>
+          <a class="navlink" href="/#reviews">Reviews</a>
+          <a class="navlink" href="/#faq">FAQ</a>
+        </div>
+        <div class="langswitch" role="group" aria-label="Language"><button class="active" type="button" aria-pressed="true">EN</button><button type="button" aria-pressed="false">DE</button></div>
+        <a class="signin" href="/#contact">Contact</a>
+        <button class="hamburger" id="hamburger" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </nav>
+    </div>
+  </header>
+  <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile navigation">
+    <a class="navlink" href="/">Home</a>
+    <span class="mobile-menu-label">Services</span>
+    <div class="m-sub"><a href="/quote-engine-students">For Students</a><a href="/quote-engine-business">For Businesses &amp; Startups</a><a href="/quote-engine-private">For Private Customers</a><a href="/#fileservice">No 3D file? We design it</a></div>
+    <a class="navlink" href="/#materials">Materials</a>
+    <a class="navlink" href="/#applications">Applications</a>
+    <a class="navlink" href="/#how">How it works</a>
+    <a class="navlink" href="/#about">About us</a>
+    <a class="navlink" href="/#reviews">Reviews</a>
+    <a class="navlink" href="/#faq">FAQ</a>
+    <a class="navlink" href="/#contact">Contact</a>
+  </nav>
+  <main>
+    <section class="intro" id="quote-engine">
+      <p class="eyebrow">For students</p>
+      <h1>Upload &amp; configure <em>your print.</em></h1>
+      <p>Drop your sliced file. We read the verified weight and print time, assign your package, then you choose material, colour and options.</p>
+    </section>
+    <section class="workspace" aria-label="3D print quote configurator">
+      <div class="controls">
+        <p class="panel-label"><span>01</span> Upload your file</p>
+        <label class="upload" id="drop-zone"><input id="file" type="file" accept=".stl,.obj,.3mf,.gcode,.gco,.nc"/><strong>Choose a 3D file</strong><span>G-code, 3MF, STL, OBJ, GCO or NC, up to 100 MB</span></label>
+        <p class="upload-hint quiet">Already sliced files preferred (G-code, sliced 3MF, and similar). Those give the fastest, most accurate quote.</p>
+        <div id="upload-preview" class="upload-preview" hidden>
+          <div class="upload-preview-thumb" id="upload-preview-thumb" aria-hidden="true"></div>
+          <div class="upload-preview-copy">
+            <strong id="upload-preview-name"></strong>
+            <span id="upload-preview-size"></span>
+          </div>
+        </div>
+        <p id="file-info" class="quiet">No file selected</p>
+        <section class="package-options" id="package-options" aria-labelledby="package-heading">
+          <p class="panel-label" id="package-heading"><span>02</span> Your student package</p>
+          <div class="package-grid" aria-live="polite">
+            <button class="package-card" type="button" data-package="Basic" aria-pressed="true"><h2>Basic</h2><p>Up to 150 g</p><strong>€39</strong></button>
+            <button class="package-card" type="button" data-package="Medium" aria-pressed="false"><span class="package-badge">Expert review included</span><h2>Medium</h2><p>Up to 300 g</p><strong>€69</strong></button>
+            <button class="package-card" type="button" data-package="Large" aria-pressed="false"><span class="package-badge">Expert review included</span><h2>Large</h2><p>From 300 g</p><strong>€89</strong></button>
+          </div>
+          <p class="package-note" id="package-note">Select a package to explore prices. Your final package will be set automatically from the verified file weight.</p>
+          <div id="basic-disclaimer" class="basic-disclaimer" hidden>
+            <p class="basic-disclaimer-title">Basic package: no engineering support</p>
+            <p>Without Expert Review, we print your file exactly as uploaded. No one checks geometry, wall thickness or dimensions before printing. You are responsible for how your print turns out, including issues caused by the file itself.</p>
+            <label class="basic-disclaimer-ack"><input id="basic-disclaimer-ack" type="checkbox"/> <span>I understand my file will be printed as-is and I accept responsibility for the result.</span></label>
+          </div>
+        </section>
+        <fieldset id="material-field"><legend><span>03</span> Material</legend><div class="material-chips" id="material-chips" role="group" aria-label="Material"><button class="material-chip is-selected" type="button" data-material="PLA" aria-pressed="true">PLA</button><button class="material-chip" type="button" data-material="PETG" aria-pressed="false">PETG</button><button class="material-chip" type="button" data-material="ABS" aria-pressed="false">ABS</button><button class="material-chip" type="button" data-material="TPU" aria-pressed="false">TPU</button><button class="material-chip" type="button" data-material="Not sure" aria-pressed="false">Not sure</button></div><p class="material-note quiet">More materials on request.</p></fieldset>
+        <fieldset id="materials"><legend><span>04</span> Preview colour</legend><div id="colors" class="colors"></div><label class="custom-color-field" for="custom-color"><span>Colour not listed?</span><input id="custom-color" type="text" placeholder="Write your preferred colour" autocomplete="off"/></label><p class="color-note quiet">More colours on request.</p></fieldset>
+        <div id="status" role="status" aria-live="polite">Ready for an upload.</div>
+      </div>
+      <div class="preview-panel">
+        <div class="preview-shell">
+          <div id="preview" class="preview" aria-label="3D model preview"></div>
+          <div id="preview-loading" class="preview-loading" hidden>
+            <p id="preview-loading-label">Building preview…</p>
+            <div class="preview-loading-track" aria-hidden="true"><span id="preview-loading-fill"></span></div>
+            <p id="preview-loading-percent">0%</p>
+          </div>
+        </div>
+        <div class="preview-actions"><button id="reset" type="button">Reset view</button><button id="fit" type="button">Fit model</button><label><input id="rotate" type="checkbox"/> Auto-rotate</label><button id="expand" type="button" disabled>Expand preview</button></div>
+        <section id="results" class="results preview-metrics" hidden><div><p class="eyebrow">Verified production data</p><h2>Production metrics</h2><p id="metric-note" class="quiet"></p><dl id="metrics"></dl></div></section>
+      </div>
+    </section>
+    <section class="request-options" id="request-options" aria-labelledby="request-options-heading" hidden>
+      <p class="eyebrow">Secure checkout</p>
+      <h2 id="request-options-heading">Print and payment details</h2>
+      <div class="request-layout">
+      <div class="request-panel">
+        <fieldset id="engineering-field"><legend><span>01</span> Engineering support</legend><div class="option-grid option-grid-two" id="engineering-options"><div class="option-with-desc"><button class="option-card" type="button" data-engineering="review" aria-pressed="false"><span class="option-indicator"></span><span><strong>Get Expert Review</strong></span><b>+€15</b></button><details class="option-desc"><summary><span class="desc-toggle-show">Show description</span><span class="desc-toggle-hide">Hide description</span></summary><p>Before we print, an expert reviews your file for geometry, wall thickness, dimensions, orientation and obvious print risks.</p></details></div><div class="option-with-desc"><button class="option-card" type="button" data-engineering="editing" aria-pressed="false"><span class="option-indicator"></span><span><strong>File Editing &amp; Optimization</strong></span><b>€90/hour</b></button><details class="option-desc"><summary><span class="desc-toggle-show">Show description</span><span class="desc-toggle-hide">Hide description</span></summary><p>When your model is not print-ready, we repair, adjust and optimize the file for printing.</p></details></div></div><div id="private-disclaimer" class="basic-disclaimer" hidden><p class="basic-disclaimer-title">No Expert Review selected</p><p>Without Expert Review, there is no engineering support. We print your file as uploaded. You are responsible for how your print turns out, including issues caused by the file itself.</p><label class="basic-disclaimer-ack"><input id="private-disclaimer-ack" type="checkbox"/> <span>I understand my file will be printed as-is and I accept responsibility for the result.</span></label></div></fieldset>
+        <fieldset><legend><span>02</span> Production speed</legend><div class="option-grid option-grid-three" id="speed-options"><button class="option-card is-selected" type="button" data-speed="standard" aria-pressed="true"><span class="option-indicator"></span><span><strong>Standard</strong><small>8-10 days</small></span></button><button class="option-card" type="button" data-speed="priority" aria-pressed="false"><span class="option-badge">Most selected</span><span class="option-indicator"></span><span><strong>Priority</strong><small>1-2 days</small></span><b>+€39</b></button><button class="option-card" type="button" data-speed="express" aria-pressed="false"><span class="option-indicator"></span><span><strong>Express</strong><small>3-5 days</small></span><b>+€19</b></button></div></fieldset>
+        <fieldset><legend><span>03</span> Student verification</legend><p class="field-help">Verify your student status with a university email address or a student ID. This is required to place a student order.</p><div class="option-grid option-grid-two" id="verification-options"><button class="option-card" type="button" data-verification="email" aria-pressed="false"><span class="option-indicator"></span><span><strong>University email</strong><small>Verify with your .edu or university address</small></span></button><button class="option-card" type="button" data-verification="id" aria-pressed="false"><span class="option-indicator"></span><span><strong>Student ID</strong><small>Upload a photo or PDF of your student ID</small></span></button></div><label class="quote-field" id="university-email-field" hidden>University email address<input id="university-email" type="email" autocomplete="email" placeholder="name@university.edu"/><span class="verification-status" id="student-email-verification" role="status" aria-live="polite" hidden></span></label><label class="quote-field" id="student-id-field" hidden>Student ID<input id="student-id" type="file" accept=".jpg,.jpeg,.png,.pdf"/><div id="student-id-preview" class="upload-preview student-id-preview" hidden><div class="upload-preview-thumb" id="student-id-thumb" aria-hidden="true"></div><div class="upload-preview-copy"><strong id="student-id-name"></strong><span id="student-id-size"></span></div></div></label></fieldset>
+        <fieldset><legend><span>04</span> Contact details</legend><div class="option-grid option-grid-two" id="contact-options"><button class="option-card is-selected" type="button" data-contact="email" aria-pressed="true"><span class="option-indicator"></span><span><strong>Email</strong><small>Get updates by email</small></span></button><button class="option-card" type="button" data-contact="phone" aria-pressed="false"><span class="option-indicator"></span><span><strong>Phone / WhatsApp</strong><small>Get updates by phone or WhatsApp</small></span></button></div><label class="quote-field" id="contact-email-field">Email address<input id="contact-email" type="email" autocomplete="email" placeholder="you@example.com"/></label><label class="quote-field" id="contact-phone-field" hidden>Phone number<input id="contact-phone" type="tel" autocomplete="tel" placeholder="+49"/></label></fieldset>
+        <p class="request-status" id="request-status" role="status" aria-live="polite"></p>
+      </div>
+      <aside class="order-summary" id="order-summary" aria-labelledby="order-summary-heading">
+        <p class="eyebrow">Your result</p>
+        <h3 id="order-summary-heading" class="summary-total"><span id="summary-total">€39.00</span></h3>
+        <p class="summary-subtitle" id="summary-subtitle">Upload a file to verify your package.</p>
+        <dl class="summary-lines"><div><dt>File</dt><dd id="summary-file">Not uploaded</dd></div><div><dt>Weight</dt><dd id="summary-weight">Pending</dd></div><div><dt>Package</dt><dd id="summary-package">Basic</dd></div><div><dt>Material</dt><dd id="summary-material">PLA</dd></div><div><dt>Speed</dt><dd id="summary-speed">Standard · 8-10 days</dd></div><div><dt>Engineering</dt><dd id="summary-engineering">Not selected</dd></div></dl>
+        <button class="summary-checkout" id="summary-checkout" type="button">Continue to payment</button>
+        <button class="request-submit summary-checkout-alt" id="submit-request" type="button" hidden>Continue to secure payment</button>
+        <p class="summary-hint" id="summary-hint">Verify your student status to continue.</p>
+      </aside>
+      </div>
+    </section>
+    <div class="mobile-checkout" id="mobile-checkout" hidden><div><span>Total</span><strong id="mobile-total">€39.00</strong></div><button id="mobile-checkout-button" type="button">Pay securely</button></div>
+    <div id="success-toast" class="success-toast" hidden role="status" aria-live="polite">
+      <div class="success-toast-card">
+        <div class="success-toast-icon" aria-hidden="true">
+          <svg viewBox="0 0 52 52" fill="none"><circle cx="26" cy="26" r="24" stroke="currentColor" stroke-width="2"/><circle cx="26" cy="26" r="18" fill="currentColor" opacity="0.12"/><path d="M16.5 27.2l6.2 6.3L35.5 20" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <p id="success-toast-message">Request sent</p>
+      </div>
+    </div>
+    <section class="student-projects" aria-labelledby="student-projects-heading">
+      <div class="student-projects-copy">
+        <p class="eyebrow">For students</p>
+        <h2 id="student-projects-heading">Built for student projects.</h2>
+        <p>Coursework and thesis models, architecture and engineering parts, design studies and portfolio pieces. Upload your file, receive a clear quote, and keep your project moving. When the campus lab is full, closed or too slow, we print and ship from Düsseldorf.</p>
+      </div>
+      <aside class="university-note" aria-labelledby="university-note-heading">
+        <div>
+          <h3 id="university-note-heading">For universities, schools and lecturers</h3>
+          <p>Offer your students a simple external 3D printing option for overflow demand, private projects and tight deadlines.</p>
+        </div>
+        <a class="university-note-link" href="/#contact">Partner with us</a>
+      </aside>
+    </section>
+    <section class="private-customer-content" id="private-customer-content" aria-labelledby="private-printing-heading" hidden>
+      <div class="private-content-intro">
+        <p class="eyebrow">For private customers</p>
+        <h2 id="private-printing-heading">Anything you need printed.</h2>
+        <p>Replacement and spare parts, hobby and tabletop pieces, gifts, miniatures, cosplay props, home accessories and custom objects. If you have a printable file, upload it above. If you only have an idea, describe it and we'll check whether we can model it for you.</p>
+      </div>
+      <div class="private-replacement">
+        <p class="eyebrow">Replacement parts</p>
+        <h2>Need a replacement part?</h2>
+        <p>A clip, cover, holder or small part broke or went missing? Send us a photo, sketch or 3D file. We will check whether the part can be recreated and which material makes sense.</p>
+        <ol class="private-steps">
+          <li><span>01</span><p>Send a photo, sketch or file.</p></li>
+          <li><span>02</span><p>We check geometry and material.</p></li>
+          <li><span>03</span><p>You receive a quote.</p></li>
+          <li><span>04</span><p>We print the part after approval.</p></li>
+        </ol>
+        <a class="private-content-button" href="#quote-engine">Check my part <span aria-hidden="true">→</span></a>
+      </div>
+      <aside class="private-file-help">
+        <p class="eyebrow">No 3D file yet?</p>
+        <h3>No 3D file? We'll help you create one.</h3>
+        <p>Send us a photo, sketch or reference and we'll create a printable 3D model for you.</p>
+        <a href="/#fileservice">Describe your idea <span aria-hidden="true">→</span></a>
+      </aside>
+    </section>
+  </main>
+  <footer id="contact">
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="foot-brand"><a class="brand" href="/"><span class="dot" aria-hidden="true"></span>3DNow</a><p>3D printing, now. From file to finished part, for students, businesses and makers across Europe.</p></div>
+        <div class="foot-col"><h2>Services</h2><a href="/quote-engine-students">For Students</a><a href="/quote-engine-business">For Businesses &amp; Startups</a><a href="/quote-engine-private">For Private Customers</a><a href="/#fileservice">No 3D file? We design it</a></div>
+        <div class="foot-col"><h2>Explore</h2><a href="/#materials">Materials</a><a href="/#applications">Applications</a><a href="/#how">How it works</a><a href="/#about">About us</a><a href="/#faq">FAQ</a><a href="/#home">Reviews</a></div>
+        <div class="foot-col"><h2>Contact</h2><a href="tel:+4921115859748">+49 211 15859748</a><a href="mailto:support@ifactory3d.com">support@ifactory3d.com</a><a href="https://wa.me/4921115859748" target="_blank" rel="noopener">WhatsApp</a><a href="/#contact">Wanheimer Str. 43, 40472 Düsseldorf</a></div>
+      </div>
+      <div class="foot-bottom"><span>© 2026 3dnow.eu · Düsseldorf, Deutschland</span><div class="legal-links"><a href="/#impressum">Impressum</a><a href="/#datenschutz">Privacy</a><a href="/#agb">Terms</a><a href="/#widerruf">Withdrawal</a></div></div>
+    </div>
+  </footer>
+  <dialog id="preview-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><div><h2 id="dialog-title">Expanded 3D preview</h2><p id="dialog-subtitle"></p></div><button id="close-dialog" type="button">Close</button></div><div id="modal-preview" class="preview modal-preview"></div><div id="dialog-details"></div><div class="preview-actions"><button id="modal-reset" type="button">Reset view</button><button id="modal-fit" type="button">Fit model</button><label><input id="modal-rotate" type="checkbox"/> Auto-rotate</label></div></dialog>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

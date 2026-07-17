@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import app from '../server/index.js';
+test('health reports slicer state',async()=>{const req={method:'GET',url:'/api/health',headers:{}};let body;await new Promise((resolve,reject)=>{const res={setHeader(){},getHeader(){},end(){resolve();},json(value){body=value;resolve();}};app.handle(req,res,error=>error&&reject(error));});assert.equal(body.ok,true);assert.equal(typeof body.slicerAvailable,'boolean');});

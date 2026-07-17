@@ -1,0 +1,13 @@
+node_modules/
+dist/
+server/uploads/*
+!server/uploads/.gitkeep
+server/submissions/*
+!server/submissions/.gitkeep
+server/output/gcode/*
+!server/output/gcode/.gitkeep
+.env
+
+.DS_Store
+outputs/
+work/

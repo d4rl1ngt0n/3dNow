@@ -1,0 +1,17 @@
+services:
+  quote-engine:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      PRUSA_SLICER_PATH: prusa-slicer
+      SLICE_TIMEOUT_MS: "600000"
+      SLICE_THREADS: "4"
+    volumes:
+      - quote-uploads:/app/server/uploads
+      - quote-output:/app/server/output/gcode
+
+volumes:
+  quote-uploads:
+  quote-output:
