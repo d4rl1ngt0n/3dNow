@@ -10,7 +10,7 @@ RUN npm run build
 
 FROM node:20-bookworm-slim AS runtime
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends prusa-slicer xvfb \
+  && apt-get install -y --no-install-recommends prusa-slicer xvfb xauth \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /home/node/.config /var/lib/3dnow \
   && chown -R node:node /home/node /var/lib/3dnow

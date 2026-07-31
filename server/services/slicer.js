@@ -36,24 +36,65 @@ function resolveOutputPath(requested) {
   return null;
 }
 
-function spawnSlicer(args) {
-  const useXvfb = process.env.SLICE_USE_XVFB !== '0' && existsSync('/usr/bin/xvfb-run');
+function canUseXvfb() {
+  if (process.env.SLICE_USE_XVFB === '0') return false;
+  return existsSync('/usr/bin/xvfb-run') && existsSync('/usr/bin/xauth');
+}
+
+function spawnSlicer(args, { useXvfb }) {
+  const env = {
+    ...process.env,
+    HOME: process.env.HOME || '/home/node',
+    XAUTHORITY: process.env.XAUTHORITY || '/tmp/.Xauthority'
+  };
   if (useXvfb) {
-    return spawn('xvfb-run', ['-a', config.slicerPath, ...args], {
+    return spawn('xvfb-run', ['-a', '-s', '-ac -screen 0 1024x768x24', config.slicerPath, ...args], {
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        HOME: process.env.HOME || '/home/node',
-        DISPLAY: process.env.DISPLAY || ':99'
-      }
+      env: { ...env, DISPLAY: process.env.DISPLAY || ':99' }
     });
   }
   return spawn(config.slicerPath, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      HOME: process.env.HOME || '/home/node'
-    }
+    env
+  });
+}
+
+function runOnce(args, output, settings, useXvfb) {
+  return new Promise((resolve, reject) => {
+    const child = spawnSlicer(args, { useXvfb });
+    let stderr = '';
+    let stdout = '';
+    child.stderr?.on('data', chunk => {
+      stderr = `${stderr}${chunk}`.slice(-6000);
+    });
+    child.stdout?.on('data', chunk => {
+      stdout = `${stdout}${chunk}`.slice(-2000);
+    });
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error('Slicing timed out'));
+    }, config.sliceTimeoutMs);
+    child.on('error', err => {
+      clearTimeout(timer);
+      reject(new Error(err.message || 'Slicing failed to start'));
+    });
+    child.on('close', code => {
+      clearTimeout(timer);
+      const detail = `${stderr}\n${stdout}`.trim();
+      const written = resolveOutputPath(output);
+      if (code === 0 && written) {
+        if (written !== output) {
+          fs.copyFile(written, output).then(() => resolve(settings)).catch(() => resolve(settings));
+          return;
+        }
+        resolve(settings);
+        return;
+      }
+      const error = new Error(detail.split('\n').filter(Boolean).slice(-4).join(' ') || `Slicing failed (exit ${code})`);
+      error.detail = detail;
+      error.exitCode = code;
+      reject(error);
+    });
   });
 }
 
@@ -88,41 +129,15 @@ export function slice(input, output, material, profileInput = DEFAULT_SLICE_SETT
       input
     ];
 
-    await new Promise((resolve, reject) => {
-      const child = spawnSlicer(args);
-      let stderr = '';
-      let stdout = '';
-      child.stderr?.on('data', chunk => {
-        stderr = `${stderr}${chunk}`.slice(-6000);
-      });
-      child.stdout?.on('data', chunk => {
-        stdout = `${stdout}${chunk}`.slice(-2000);
-      });
-      const timer = setTimeout(() => {
-        child.kill('SIGKILL');
-        reject(new Error('Slicing timed out'));
-      }, config.sliceTimeoutMs);
-      child.on('error', err => {
-        clearTimeout(timer);
-        reject(new Error(err.message || 'Slicing failed to start'));
-      });
-      child.on('close', code => {
-        clearTimeout(timer);
-        const written = resolveOutputPath(output);
-        if (code === 0 && written) {
-          if (written !== output) {
-            // Normalize to the requested path when Prusa renamed the file.
-            fs.copyFile(written, output).then(resolve).catch(() => resolve(settings));
-            return;
-          }
-          return resolve(settings);
-        }
-        const detail = `${stderr}\n${stdout}`.trim().split('\n').filter(Boolean).slice(-4).join(' ');
-        reject(new Error(detail || `Slicing failed (exit ${code})`));
-      });
-    });
-
-    return settings;
+    const preferXvfb = canUseXvfb();
+    try {
+      return await runOnce(args, output, settings, preferXvfb);
+    } catch (firstError) {
+      const detail = String(firstError.detail || firstError.message || '');
+      const shouldRetryWithoutXvfb = preferXvfb && /xauth|xvfb-run|DISPLAY|cannot open display/i.test(detail);
+      if (!shouldRetryWithoutXvfb) throw firstError;
+      return runOnce(args, output, settings, false);
+    }
   };
 
   const queued = chain.then(run, run);
