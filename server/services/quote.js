@@ -3,7 +3,12 @@ export const MATERIALS = { PLA: { densityGcm3: 1.24, ratePerCm3: .08 }, PETG: { 
 
 export function businessQuantityMultiplier(quantity) {
   if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Business quantity must be at least one.');
-  // Ben: ×1.8 for 100+ · ×2.5 for 50+ · ×3 for 20+ · else ×4
+  // Single prototype: Ben rate × 8. Production runs start at 10 with Ben batch factors.
+  if (quantity === 1) return 8;
+  if (quantity < 10) {
+    throw new Error('Production runs start at 10 pieces. Use quantity 1 for a single prototype.');
+  }
+  // Ben: ×1.8 for 100+ · ×2.5 for 50+ · ×3 for 20+ · else ×4 (10–19)
   if (quantity >= 100) return 1.8;
   if (quantity >= 50) return 2.5;
   if (quantity >= 20) return 3;
@@ -14,7 +19,12 @@ export function businessQuote({ printTimeSec, printer, quantity, speed = 'standa
   if (!Number.isFinite(printTimeSec) || printTimeSec < 0 || !printer?.ratePerHour) return null;
   const selected = PRINTERS[printer.id] || printer;
   const printHours = Number((printTimeSec / 3600).toFixed(2));
-  const multiplier = businessQuantityMultiplier(quantity);
+  let multiplier;
+  try {
+    multiplier = businessQuantityMultiplier(quantity);
+  } catch {
+    return null;
+  }
   const unitPrintCost = Number((printHours * selected.ratePerHour).toFixed(2));
   const unitPrice = Number((unitPrintCost * multiplier).toFixed(2));
   const productionTotal = Number((unitPrice * quantity).toFixed(2));
@@ -25,6 +35,7 @@ export function businessQuote({ printTimeSec, printer, quantity, speed = 'standa
   return {
     currency: 'EUR',
     flow: 'business',
+    mode: quantity === 1 ? 'prototype' : 'production',
     quantity,
     multiplier,
     printer: { id: selected.id, name: selected.name, ratePerHour: selected.ratePerHour, printHours },

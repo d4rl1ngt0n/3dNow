@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { businessQuantityMultiplier, businessQuote } from '../server/services/quote.js';
 import { PRINTERS } from '../server/services/printer.js';
 
-test('uses Ben quantity multipliers at each boundary', () => {
-  assert.equal(businessQuantityMultiplier(1), 4);
+test('uses prototype ×8 and Ben production multipliers', () => {
+  assert.equal(businessQuantityMultiplier(1), 8);
+  assert.throws(() => businessQuantityMultiplier(5), /start at 10/);
+  assert.equal(businessQuantityMultiplier(10), 4);
   assert.equal(businessQuantityMultiplier(19), 4);
   assert.equal(businessQuantityMultiplier(20), 3);
   assert.equal(businessQuantityMultiplier(49), 3);
@@ -13,9 +15,20 @@ test('uses Ben quantity multipliers at each boundary', () => {
   assert.equal(businessQuantityMultiplier(100), 1.8);
 });
 
-test('calculates P1S business estimates from actual print hours and quantity', () => {
-  // 5 h × €0.12/h = €0.60 · ×4 (qty < 20) = €2.40/unit · ×10 = €24
+test('calculates a single prototype at Ben rate × 8', () => {
+  // 5 h × €0.12/h = €0.60 · ×8 = €4.80
+  const quote = businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.p1s, quantity: 1 });
+  assert.equal(quote.mode, 'prototype');
+  assert.equal(quote.unitPrintCost, 0.6);
+  assert.equal(quote.multiplier, 8);
+  assert.equal(quote.unitPrice, 4.8);
+  assert.equal(quote.total, 4.8);
+});
+
+test('calculates P1S production estimates from print hours and quantity', () => {
+  // 5 h × €0.12/h = €0.60 · ×4 (qty 10–19) = €2.40/unit · ×10 = €24
   const quote = businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.p1s, quantity: 10 });
+  assert.equal(quote.mode, 'production');
   assert.equal(quote.unitPrintCost, 0.6);
   assert.equal(quote.multiplier, 4);
   assert.equal(quote.unitPrice, 2.4);

@@ -44,34 +44,54 @@ if (colourField && !document.querySelector('#quantity-field')) {
     <legend><span>04</span> Quantity</legend>
     <div class="option-grid option-grid-two" id="quantity-options">
       <button class="option-card" type="button" data-quantity-type="run" aria-pressed="false">
-        <span class="option-indicator"></span><span><strong>Production run</strong><small>Set any quantity for a production estimate.</small></span>
+        <span class="option-indicator"></span><span><strong>Production run</strong><small>From 10 pieces. Batch pricing applies.</small></span>
       </button>
       <button class="option-card is-selected" type="button" data-quantity-type="prototype" aria-pressed="true">
-        <span class="option-indicator"></span><span><strong>Single prototype</strong><small>One sample to validate before a batch.</small></span>
+        <span class="option-indicator"></span><span><strong>Single prototype</strong><small>One sample at prototype rate (×8).</small></span>
       </button>
     </div>
     <label class="business-quantity-input" id="business-quantity-input">Number of prints needed<input id="business-quantity" type="number" min="1" value="1" inputmode="numeric"></label>
   `;
   colourField.after(quantityField);
 
+  const quantityInput = quantityField.querySelector('#business-quantity');
+  const syncQuantityMode = isRun => {
+    if (!isRun) {
+      quantityInput.min = '1';
+      quantityInput.value = '1';
+      quantityInput.readOnly = true;
+      quantityInput.setCustomValidity('');
+      return;
+    }
+    quantityInput.readOnly = false;
+    quantityInput.min = '10';
+    if (Number(quantityInput.value) < 10) quantityInput.value = '10';
+    quantityInput.setCustomValidity(Number(quantityInput.value) < 10 ? 'Production runs start at 10 pieces.' : '');
+  };
+  syncQuantityMode(false);
+
   quantityField.querySelectorAll('.option-card').forEach(card => {
     card.addEventListener('click', () => {
       const isRun = card.dataset.quantityType === 'run';
-      const quantityInput = quantityField.querySelector('#business-quantity');
       quantityField.querySelectorAll('.option-card').forEach(option => {
         const selected = option === card;
         option.classList.toggle('is-selected', selected);
         option.setAttribute('aria-pressed', String(selected));
       });
-      if (!isRun) quantityInput.value = '1';
-      if (isRun && Number(quantityInput.value) <= 1) quantityInput.value = '100';
+      syncQuantityMode(isRun);
       refreshEstimate();
     });
   });
 
-  quantityField.querySelector('#business-quantity').addEventListener('input', event => {
+  quantityInput.addEventListener('input', event => {
     const input = event.currentTarget;
-    input.setCustomValidity(input.value && Number(input.value) < 1 ? 'Enter at least one print.' : '');
+    const isRun = quantityField.querySelector('[data-quantity-type="run"]')?.classList.contains('is-selected');
+    if (isRun) {
+      input.setCustomValidity(!input.value || Number(input.value) < 10 ? 'Production runs start at 10 pieces.' : '');
+    } else {
+      input.value = '1';
+      input.setCustomValidity('');
+    }
     refreshEstimate();
   });
 }
@@ -134,14 +154,17 @@ function renderEstimate() {
   const quote = state.quote;
   const quantity = Number(document.querySelector('#business-quantity')?.value) || 1;
   const status = document.querySelector('#request-status');
+  const prototype = quantity === 1;
   document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
     button.textContent = 'Request production quote';
   });
   if (!quote) return;
   document.querySelector('#summary-total').textContent = `€${quote.total.toFixed(2)}`;
   document.querySelector('#mobile-total').textContent = `€${quote.total.toFixed(2)}`;
-  document.querySelector('#summary-subtitle').textContent = `Production estimate for ${quantity} pieces`;
-  document.querySelector('#summary-package').textContent = `${quantity} pieces`;
+  document.querySelector('#summary-subtitle').textContent = prototype
+    ? 'Single prototype estimate (machine rate × 8)'
+    : `Production estimate for ${quantity} pieces`;
+  document.querySelector('#summary-package').textContent = prototype ? '1 prototype' : `${quantity} pieces`;
   document.querySelector('#summary-hint').textContent = quote.editingCost
     ? 'Estimate includes the first hour of file editing. Any additional editing time requires your approval before further charges.'
     : 'Estimate includes your selected production options.';
@@ -155,6 +178,10 @@ async function refreshEstimate() {
     const quantity = Number(document.querySelector('#business-quantity')?.value);
     const status = document.querySelector('#request-status');
     if (!state.job || !Number.isInteger(quantity) || quantity < 1) return;
+    if (quantity !== 1 && quantity < 10) {
+      status.textContent = 'Production runs start at 10 pieces.';
+      return;
+    }
     status.textContent = 'Updating production estimate…';
     try {
       const updated = await updateBusinessQuote(state.job.jobId, {

@@ -268,6 +268,10 @@ jobsRouter.post('/', upload.single('file'), async (req, res) => {
     await fs.unlink(req.file.path).catch(() => {});
     return res.status(400).json({ error: 'Business quantity must be at least one.' });
   }
+  if (flow === 'business' && quantity !== 1 && quantity < 10) {
+    await fs.unlink(req.file.path).catch(() => {});
+    return res.status(400).json({ error: 'Production runs start at 10 pieces. Use quantity 1 for a single prototype.' });
+  }
   const normalized = normalizeSliceSettings({
     nozzleDiameterMm: req.body.nozzleDiameterMm ?? req.body.nozzle,
     layerHeightMm: req.body.layerHeightMm ?? req.body.layerHeight,
@@ -409,12 +413,18 @@ jobsRouter.post('/:jobId/business-quote', (req, res) => {
   if (!Number.isInteger(quantity) || quantity < 1) {
     return res.status(400).json({ error: 'Enter a quantity of at least one.' });
   }
+  if (quantity !== 1 && quantity < 10) {
+    return res.status(400).json({ error: 'Production runs start at 10 pieces. Use quantity 1 for a single prototype.' });
+  }
   if (!job.metrics.printTimeSec || !job.metrics.printer) {
     return res.status(409).json({ error: 'Verified print time and printer details are required for a business estimate.' });
   }
   job.quantity = quantity;
   job.businessOptions = { speed, engineering };
   job.quote = businessQuote({ printTimeSec: job.metrics.printTimeSec, printer: job.metrics.printer, quantity, speed, engineering });
+  if (!job.quote) {
+    return res.status(400).json({ error: 'Could not build a production estimate for that quantity.' });
+  }
   return res.json(publicJob(job));
 });
 
