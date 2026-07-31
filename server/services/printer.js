@@ -1,8 +1,9 @@
 export const PRINTERS = {
-  p1s: { id: 'p1s', name: 'P1S', ratePerHour: 0.12, volume: { x: 256, y: 256, z: 256 } },
-  a2l: { id: 'a2l', name: 'A2L', ratePerHour: 0.30, volume: { x: 330, y: 320, z: 325 } },
-  h2s: { id: 'h2s', name: 'H2S', ratePerHour: 0.30, volume: { x: 340, y: 320, z: 340 } },
-  onePro: { id: 'one-pro', name: 'One Pro', ratePerHour: 0.30, volume: null }
+  // Machine-hour rates for business estimates (EUR / hour).
+  p1s: { id: 'p1s', name: 'P1S', ratePerHour: 12, volume: { x: 256, y: 256, z: 256 } },
+  a2l: { id: 'a2l', name: 'A2L', ratePerHour: 30, volume: { x: 330, y: 320, z: 325 } },
+  h2s: { id: 'h2s', name: 'H2S', ratePerHour: 30, volume: { x: 340, y: 320, z: 340 } },
+  onePro: { id: 'one-pro', name: 'One Pro', ratePerHour: 30, volume: null }
 };
 export function printerFromMetadata(name = '') {
   const n = String(name || '').toLowerCase();

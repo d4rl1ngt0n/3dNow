@@ -92,14 +92,18 @@ function applyGcode(job, parsed, source) {
   metrics.printer = routed;
 
   if (parsed.confidence === 'header' && routed) {
-    job.quote = job.flow === 'business'
-      ? businessQuote({ printTimeSec: metrics.printTimeSec, printer: routed, quantity: job.quantity })
-      : studentQuote({
+    if (job.flow === 'business') {
+      job.quote = businessQuote({ printTimeSec: metrics.printTimeSec, printer: routed, quantity: job.quantity });
+    } else if (job.flow === 'private') {
+      job.quote = null;
+    } else {
+      job.quote = studentQuote({
         material: job.material,
         weightG: metrics.weightG,
         printTimeSec: metrics.printTimeSec,
         printer: routed
       });
+    }
   } else if (!parsed.confidence) {
     job.warnings.push('Sliced metadata is incomplete. This file needs manual review.');
   } else if (parsed.confidence === 'partial') {
@@ -127,8 +131,11 @@ async function sliceAndQuote(job, route) {
   job.outputPaths = [path.basename(out)];
   applyGcode(job, parseGcode(await fs.readFile(out)), 'slicer');
   job.metrics.printer ||= route.printer;
-  job.quote = job.metrics.printer && job.metrics.printTimeSec != null
-    ? job.flow === 'business'
+  if (job.flow === 'private') {
+    job.quote = null;
+    job.status = job.metrics.printTimeSec != null || job.metrics.weightG != null ? 'ready' : 'manual-review';
+  } else if (job.metrics.printer && job.metrics.printTimeSec != null) {
+    job.quote = job.flow === 'business'
       ? businessQuote({ printTimeSec: job.metrics.printTimeSec, printer: job.metrics.printer, quantity: job.quantity })
       : job.metrics.weightG != null
         ? studentQuote({
@@ -137,11 +144,24 @@ async function sliceAndQuote(job, route) {
           printTimeSec: job.metrics.printTimeSec,
           printer: job.metrics.printer
         })
-        : null
-    : null;
-  job.status = job.quote ? 'ready' : 'manual-review';
+        : null;
+    job.status = job.quote ? 'ready' : 'manual-review';
+  } else {
+    job.quote = null;
+    job.status = 'manual-review';
+  }
   job.sliceStatus = 'ready';
   job.progress = 100;
+}
+
+function finalizeQuoteStatus(job) {
+  if (job.flow === 'private') {
+    job.status = (job.metrics?.printTimeSec != null || job.metrics?.weightG != null || job.metrics?.bboxMm)
+      ? 'ready'
+      : 'manual-review';
+    return;
+  }
+  job.status = job.quote ? 'ready' : 'manual-review';
 }
 
 async function process(job) {
@@ -152,7 +172,7 @@ async function process(job) {
 
     if (['gcode', 'gco', 'nc'].includes(job.format)) {
       applyGcode(job, parseGcode(data), 'gcode');
-      job.status = job.quote ? 'ready' : 'manual-review';
+      finalizeQuoteStatus(job);
       job.progress = 100;
       return;
     }
@@ -181,7 +201,7 @@ async function process(job) {
         }));
 
         if (!job.metrics.bboxMm && info.geometry?.bboxMm) job.metrics.bboxMm = info.geometry.bboxMm;
-        job.status = job.quote ? 'ready' : 'manual-review';
+        finalizeQuoteStatus(job);
         job.progress = 100;
         return;
       }
@@ -242,7 +262,7 @@ jobsRouter.post('/', upload.single('file'), async (req, res) => {
     await fs.unlink(req.file.path).catch(() => {});
     return res.status(400).json({ error: 'Unsupported material' });
   }
-  const flow = req.body.flow === 'business' ? 'business' : 'student';
+  const flow = ['business', 'private'].includes(req.body.flow) ? req.body.flow : 'student';
   const quantity = Number(req.body.quantity || 1);
   if (!Number.isInteger(quantity) || quantity < 1) {
     await fs.unlink(req.file.path).catch(() => {});
@@ -529,6 +549,9 @@ jobsRouter.post('/:jobId/private-quote-request', async (req, res) => {
 jobsRouter.post('/:jobId/checkout-session', orderUpload.single('studentId'), async (req, res) => {
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (job.flow !== 'student') {
+    return res.status(409).json({ error: 'Checkout is only available for student orders. Use Request quote instead.' });
+  }
   if (!job.quote) return res.status(409).json({ error: 'A verified automatic quote is required before checkout.' });
 
   let details;

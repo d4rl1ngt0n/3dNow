@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { printerFromMetadata, routePrinter } from '../server/services/printer.js';
 
 test('uses declared sliced printer metadata and hourly rates', () => {
-  assert.equal(printerFromMetadata('Bambu Lab P1S').ratePerHour, 0.12);
-  assert.equal(printerFromMetadata('Bambu Lab A2L').ratePerHour, 0.30);
-  assert.equal(printerFromMetadata('Bambu Lab H2S').ratePerHour, 0.30);
-  assert.equal(printerFromMetadata('One Pro belt printer').ratePerHour, 0.30);
+  assert.equal(printerFromMetadata('Bambu Lab P1S').ratePerHour, 12);
+  assert.equal(printerFromMetadata('Bambu Lab A2L').ratePerHour, 30);
+  assert.equal(printerFromMetadata('Bambu Lab H2S').ratePerHour, 30);
+  assert.equal(printerFromMetadata('One Pro belt printer').ratePerHour, 30);
 });
 
 test('P1S accepts models within its full build volume', () => {

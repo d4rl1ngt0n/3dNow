@@ -36,6 +36,15 @@ const request = { engineering: null, speed: 'standard', verification: null, cont
 const businessFlow = window.location.pathname === '/quote-engine-business';
 const privateFlow = window.location.pathname === '/quote-engine-private';
 const studentFlow = !businessFlow && !privateFlow;
+
+// Hide student-only UI immediately (do not wait for async private/business modules).
+if (!studentFlow) {
+  const verificationField = $('#verification-options')?.closest('fieldset');
+  if (verificationField) verificationField.hidden = true;
+  document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+    button.textContent = businessFlow ? 'Request production quote' : 'Request quote';
+  });
+}
 state.preview = new Preview($('#preview'));
 
 function sliceMaterialFor(material) {
@@ -497,6 +506,31 @@ function renderOrderSummary() {
     $('#summary-material').textContent = displayMaterial();
     $('#summary-speed').textContent = request.speed === 'priority' ? 'Priority · 2-3 days' : request.speed === 'express' ? 'Express · 4-6 days' : 'Standard · 7-10 days';
     $('#summary-engineering').textContent = engineering;
+    document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+      button.textContent = 'Request production quote';
+    });
+    $('#summary-checkout').disabled = !ready;
+    $('#mobile-checkout-button').disabled = !ready;
+    $('#summary-hint').textContent = summaryHintText(values);
+    return;
+  }
+  if (privateFlow) {
+    const quantity = Number($('#private-quantity')?.value) || 1;
+    const engineering = request.engineering === 'review' ? 'Expert Review · +€35' : request.engineering === 'editing' ? 'Editing · €90/hour' : 'Not selected';
+    $('#summary-total').textContent = 'Quote after review';
+    $('#mobile-total').textContent = 'Quote request';
+    $('#summary-subtitle').textContent = state.file
+      ? 'We will review your file and email you a price. No payment here.'
+      : 'Upload a file to request your quote.';
+    $('#summary-file').textContent = state.file?.name || 'Not uploaded';
+    $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : 'Pending';
+    $('#summary-package').textContent = `${quantity} pieces`;
+    $('#summary-material').textContent = displayMaterial();
+    $('#summary-speed').textContent = request.speed === 'priority' ? 'Priority · 2-3 days' : request.speed === 'express' ? 'Express · 4-6 days' : 'Standard · 7-10 days';
+    $('#summary-engineering').textContent = engineering;
+    document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+      button.textContent = 'Request quote';
+    });
     $('#summary-checkout').disabled = !ready;
     $('#mobile-checkout-button').disabled = !ready;
     $('#summary-hint').textContent = summaryHintText(values);
@@ -585,7 +619,7 @@ $('#contact-options').addEventListener('click', event => {
 });
 
 async function startCheckout() {
-  if (!state.job) return;
+  if (!studentFlow || !state.job) return;
   const { universityEmail, studentId, contactEmail, contactPhone } = requestValues();
   const requestStatus = $('#request-status');
   const missing = missingRequirements();
@@ -618,9 +652,11 @@ async function startCheckout() {
 window.showQuoteSuccessToast = showSuccessToast;
 window.addEventListener('quote-engine:refresh-summary', renderOrderSummary);
 
-$('#submit-request').addEventListener('click', startCheckout);
-$('#summary-checkout').addEventListener('click', startCheckout);
-$('#mobile-checkout-button').addEventListener('click', startCheckout);
+if (studentFlow) {
+  $('#submit-request').addEventListener('click', startCheckout);
+  $('#summary-checkout').addEventListener('click', startCheckout);
+  $('#mobile-checkout-button').addEventListener('click', startCheckout);
+}
 
 function display(job, { revealQuote = true } = {}) {
   state.job = job;
@@ -949,11 +985,16 @@ $('#file').onchange = async event => {
   try {
     clearPreviewProgress();
     status('Reading sliced metadata…');
-    const quantity = businessFlow ? Number($('#business-quantity')?.value) || 1 : 1;
+    const quantity = businessFlow
+      ? Number($('#business-quantity')?.value) || 1
+      : privateFlow
+        ? Number($('#private-quantity')?.value) || 1
+        : 1;
+    const flow = businessFlow ? 'business' : privateFlow ? 'private' : 'student';
     const created = await createJob(
       file,
       sliceMaterialFor(state.material),
-      businessFlow ? 'business' : 'student',
+      flow,
       quantity
     );
     if (state.material === 'Not sure') {

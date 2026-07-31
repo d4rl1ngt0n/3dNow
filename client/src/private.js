@@ -60,9 +60,11 @@ setStep(speedOptions?.closest('fieldset'), '05', 'Delivery speed');
 setStep(engineeringOptions?.closest('fieldset'), '06', 'Optional support');
 setStep(contactField, '07', 'Contact details');
 
-const packageRow = document.querySelector('#summary-package')?.closest('div');
-const packageLabel = packageRow?.querySelector('dt');
-if (packageLabel) packageLabel.textContent = 'Quantity';
+const requestHeading = document.querySelector('#request-options-heading');
+if (requestHeading) requestHeading.textContent = 'Print and contact details';
+const packageOptionsField = document.querySelector('#package-options')?.closest('fieldset')
+  || document.querySelector('#package-options');
+if (packageOptionsField) packageOptionsField.hidden = true;
 
 const speedCopy = {
   standard: ['Standard', '7-10 days', 'Included'],
@@ -145,7 +147,7 @@ document.addEventListener('click', async event => {
       color: document.querySelector('#custom-color')?.value.trim() || state.color,
       quantity
     });
-    status.textContent = 'Your quote request has been received. We will contact you with a price before payment.';
+    status.textContent = 'Your quote request has been received. We will email you a price. No payment is taken here.';
     window.showQuoteSuccessToast?.("Thanks, we've received your request. We will get back to you with the next steps.");
     document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(element => {
       element.disabled = true;

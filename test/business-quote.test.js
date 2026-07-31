@@ -13,16 +13,18 @@ test('uses the configured quantity multiplier at each boundary', () => {
 });
 
 test('calculates P1S business estimates from actual print hours and quantity', () => {
+  // 5 h × €12/h = €60 unit machine cost × 4 (qty 1-20) = €240/unit × 10 = €2400
   const quote = businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.p1s, quantity: 10 });
-  assert.equal(quote.unitPrintCost, 0.6);
+  assert.equal(quote.unitPrintCost, 60);
   assert.equal(quote.multiplier, 4);
-  assert.equal(quote.unitPrice, 2.4);
-  assert.equal(quote.total, 24);
+  assert.equal(quote.unitPrice, 240);
+  assert.equal(quote.total, 2400);
 });
 
 test('uses the H2S rate for A2L and H2S business estimates', () => {
-  assert.equal(businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.a2l, quantity: 100 }).total, 270);
-  assert.equal(businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.h2s, quantity: 100 }).total, 270);
+  // 5 h × €30/h = €150 × 1.8 (qty 100+) = €270/unit × 100 = €27000
+  assert.equal(businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.a2l, quantity: 100 }).total, 27000);
+  assert.equal(businessQuote({ printTimeSec: 5 * 3600, printer: PRINTERS.h2s, quantity: 100 }).total, 27000);
 });
 
 test('adds selected business options to the production total', () => {
@@ -33,8 +35,8 @@ test('adds selected business options to the production total', () => {
     speed: 'priority',
     engineering: 'editing'
   });
-  assert.equal(quote.productionTotal, 24);
+  assert.equal(quote.productionTotal, 2400);
   assert.equal(quote.speedCost, 59);
   assert.equal(quote.editingCost, 110);
-  assert.equal(quote.total, 193);
+  assert.equal(quote.total, 2569);
 });
