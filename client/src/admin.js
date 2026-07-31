@@ -175,46 +175,47 @@ function icon(name) {
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.2"/><path d="M21 3v6h-6"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
-    panel: '<path d="M4 6h16M4 12h10M4 18h16"/>',
-    panelOpen: '<path d="M4 6h16M4 12h16M4 18h16"/>'
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>'
   };
-  return `<span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${paths[name] || ''}</svg></span>`;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || ''}</svg>`;
 }
 
 function shell(content) {
   const collapsed = state.sidebarCollapsed;
   return `
-    <div class="app-shell ${collapsed ? 'is-collapsed' : ''}">
-      <aside class="sidebar" aria-label="Primary">
+    <div class="app-shell ${collapsed ? 'sidebar-collapsed' : 'sidebar-open'}">
+      <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+      <aside class="sidebar" aria-label="Primary" id="app-sidebar">
         <div class="sidebar-top">
           <a class="sidebar-brand" href="/admin" title="3DNow Ops">
             <img src="/brand-logo" alt="3DNow"/>
             <span class="sidebar-brand-text"><strong>3DNow Ops</strong><span>Production desk</span></span>
           </a>
-          <button class="collapse-btn" type="button" id="sidebar-toggle" title="${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}" aria-label="${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
-            ${icon(collapsed ? 'panelOpen' : 'panel')}
+          <button class="icon-btn" type="button" id="sidebar-close" title="Close sidebar" aria-label="Close sidebar">
+            ${icon('close')}
           </button>
         </div>
         <div>
           <div class="sidebar-section-label">Workspace</div>
           <nav class="sidebar-nav" aria-label="Ops navigation">
             <button class="nav-btn ${state.view === 'inbox' ? 'active' : ''}" type="button" data-view="inbox" title="Inbox">
-              ${icon('inbox')}
+              <span class="nav-ico">${icon('inbox')}</span>
               <span class="nav-label">Inbox</span>
               <span class="nav-count">${needsActionCount()}</span>
             </button>
             <button class="nav-btn ${state.view === 'settings' ? 'active' : ''}" type="button" data-view="settings" title="Settings">
-              ${icon('settings')}
+              <span class="nav-ico">${icon('settings')}</span>
               <span class="nav-label">Settings</span>
             </button>
           </nav>
         </div>
         <div class="sidebar-foot">
           <button class="btn btn-sm" type="button" id="refresh-btn" title="Refresh">
-            ${icon('refresh')}<span class="btn-text">Refresh</span>
+            ${icon('refresh')}<span>Refresh</span>
           </button>
           <button class="btn btn-sm btn-danger" type="button" id="logout-btn" title="Sign out">
-            ${icon('logout')}<span class="btn-text">Sign out</span>
+            ${icon('logout')}<span>Sign out</span>
           </button>
         </div>
       </aside>
@@ -226,12 +227,22 @@ function shell(content) {
   `;
 }
 
-function bindShell() {
-  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-    state.sidebarCollapsed = !state.sidebarCollapsed;
-    localStorage.setItem(SIDEBAR_KEY, state.sidebarCollapsed ? '1' : '0');
+function setSidebarCollapsed(collapsed) {
+  state.sidebarCollapsed = Boolean(collapsed);
+  localStorage.setItem(SIDEBAR_KEY, state.sidebarCollapsed ? '1' : '0');
+  const shellEl = document.querySelector('.app-shell');
+  if (!shellEl) {
     render();
-  });
+    return;
+  }
+  shellEl.classList.toggle('sidebar-collapsed', state.sidebarCollapsed);
+  shellEl.classList.toggle('sidebar-open', !state.sidebarCollapsed);
+}
+
+function bindShell() {
+  document.getElementById('sidebar-open')?.addEventListener('click', () => setSidebarCollapsed(false));
+  document.getElementById('sidebar-close')?.addEventListener('click', () => setSidebarCollapsed(true));
+  document.getElementById('sidebar-backdrop')?.addEventListener('click', () => setSidebarCollapsed(true));
 
   app.querySelectorAll('[data-view]').forEach(button => {
     button.addEventListener('click', async () => {
@@ -243,6 +254,7 @@ function bindShell() {
           showToast(error.message);
         }
       }
+      if (window.matchMedia('(max-width: 1099px)').matches) setSidebarCollapsed(true);
       render();
     });
   });
@@ -258,11 +270,41 @@ function bindShell() {
     }
   });
 
+  document.getElementById('refresh-head')?.addEventListener('click', async () => {
+    try {
+      if (state.view === 'settings') await loadSettings();
+      else await refresh();
+      render();
+      showToast(state.view === 'settings' ? 'Settings refreshed' : 'Inbox refreshed');
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
   document.getElementById('logout-btn')?.addEventListener('click', async () => {
     try { await api('/logout', { method: 'POST' }); } catch { /* ignore */ }
     clearSession();
     render();
   });
+}
+
+function headerBar(title, subtitle = '') {
+  return `
+    <div class="workspace-head">
+      <div class="workspace-head-left">
+        <button class="icon-btn" type="button" id="sidebar-open" title="Open menu" aria-label="Open menu">
+          ${icon('menu')}
+        </button>
+        <div>
+          <h1>${escapeHtml(title)}</h1>
+          ${subtitle ? `<div class="sub">${escapeHtml(subtitle)}</div>` : ''}
+        </div>
+      </div>
+      <div class="workspace-actions">
+        <button class="btn btn-sm" type="button" id="refresh-head">${icon('refresh')}<span>Refresh</span></button>
+      </div>
+    </div>
+  `;
 }
 
 function renderLogin() {
@@ -313,14 +355,7 @@ function renderInbox() {
   const list = filteredOrders();
 
   app.innerHTML = shell(`
-    <div class="workspace-head">
-      <div>
-        <h1>Inbox</h1>
-      </div>
-      <div class="workspace-actions">
-        <button class="btn btn-sm" type="button" id="refresh-head">${icon('refresh')}<span>Refresh</span></button>
-      </div>
-    </div>
+    ${headerBar('Inbox', 'Orders, quotes, and form requests')}
     <div class="workspace-body">
       <div class="metrics">
         <div class="metric"><div class="metric-label">Needs action</div><div class="metric-value">${needsActionCount()}</div></div>
@@ -745,11 +780,7 @@ function renderSettings() {
   const secretPlaceholder = '••••••••';
 
   app.innerHTML = shell(`
-    <div class="workspace-head">
-      <div>
-        <h1>Settings</h1>
-      </div>
-    </div>
+    ${headerBar('Settings', 'Handover config for email, Shopify, and access')}
     <div class="workspace-body">
       <div class="settings-grid">
         <nav class="settings-nav" aria-label="Settings sections">
