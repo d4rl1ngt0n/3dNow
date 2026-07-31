@@ -50,11 +50,18 @@ app.use((req, res, next) => {
 
 async function getBrandLogo() {
   if (brandLogo) return brandLogo;
-  const source = await fs.readFile(marketingSite, 'utf8');
-  const match = source.match(/class="brand-logo"\s+src="data:image\/png;base64,([^"]+)"/);
-  if (!match) throw new Error('Brand logo was not found.');
-  brandLogo = Buffer.from(match[1], 'base64');
-  return brandLogo;
+  const assetPath = path.join(config.root, 'server/assets/brand-logo.png');
+  try {
+    brandLogo = await fs.readFile(assetPath);
+    return brandLogo;
+  } catch {
+    // Fallback for older deploys that still ship the embedded marketing HTML logo.
+    const source = await fs.readFile(marketingSite, 'utf8');
+    const match = source.match(/class="brand-logo"\s+src="data:image\/png;base64,([^"]+)"/);
+    if (!match) throw new Error('Brand logo was not found.');
+    brandLogo = Buffer.from(match[1], 'base64');
+    return brandLogo;
+  }
 }
 
 app.use('/api/payments', express.raw({ type: 'application/json' }), paymentsRouter);

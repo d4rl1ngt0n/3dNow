@@ -17,7 +17,8 @@ function escapeHtml(value) {
 }
 
 async function getBrandLogo() {
-  logoPromise ||= fs.readFile(path.join(config.root, '3dnow_17.html'), 'utf8').then(source => {
+  logoPromise ||= fs.readFile(path.join(config.root, 'server/assets/brand-logo.png')).catch(async () => {
+    const source = await fs.readFile(path.join(config.root, '3dnow_17.html'), 'utf8');
     const match = source.match(/class="brand-logo"\s+src="data:image\/png;base64,([^"]+)"/);
     return match ? Buffer.from(match[1], 'base64') : null;
   }).catch(() => null);

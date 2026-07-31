@@ -942,13 +942,6 @@ body.embed-mode,
   cursor: not-allowed;
   transform: none;
 }
-.fs-whatsapp {
-  color: var(--text-secondary);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.fs-whatsapp:hover { color: var(--accent); }
 .idea-status {
   margin: 0;
   color: var(--text-secondary);
