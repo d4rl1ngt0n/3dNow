@@ -1,7 +1,6 @@
 import { config } from '../config.js';
 import crypto from 'node:crypto';
 
-const SHIPPING_COUNTRIES = ['AT', 'BE', 'DE', 'DK', 'ES', 'FI', 'FR', 'IE', 'IT', 'LU', 'NL', 'PL', 'PT', 'SE'];
 const STUDENT_PACKAGES = {
   Basic: { rank: 0, price: 39 },
   Medium: { rank: 1, price: 69 },
@@ -9,16 +8,66 @@ const STUDENT_PACKAGES = {
 };
 const FILE_EDITING_CENTS = 9000;
 
-function shopifyHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'X-Shopify-Access-Token': config.shopify.accessToken
-  };
+let cachedToken = null;
+let tokenExpiresAt = 0;
+
+function shopDomain() {
+  return config.shopify.shop.replace(/\.myshopify\.com$/i, '').replace(/^https?:\/\//, '');
 }
 
 function shopifyUrl(path) {
-  const shop = config.shopify.shop.replace(/\.myshopify\.com$/, '');
-  return `https://${shop}.myshopify.com/admin/api/2024-01${path}`;
+  return `https://${shopDomain()}.myshopify.com/admin/api/2024-01${path}`;
+}
+
+export function shopifyConfigured() {
+  return Boolean(
+    config.shopify.shop
+    && (config.shopify.accessToken || (config.shopify.clientId && config.shopify.clientSecret))
+  );
+}
+
+function webhookSigningSecret() {
+  return config.shopify.webhookSecret || config.shopify.clientSecret || '';
+}
+
+async function getAccessToken() {
+  if (config.shopify.accessToken && !(config.shopify.clientId && config.shopify.clientSecret)) {
+    return config.shopify.accessToken;
+  }
+
+  if (config.shopify.clientId && config.shopify.clientSecret) {
+    if (cachedToken && Date.now() < tokenExpiresAt - 60_000) return cachedToken;
+
+    const response = await fetch(`https://${shopDomain()}.myshopify.com/admin/oauth/access_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: config.shopify.clientId,
+        client_secret: config.shopify.clientSecret
+      })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Shopify token request failed: ${response.status} ${body}`);
+    }
+
+    const data = await response.json();
+    cachedToken = data.access_token;
+    tokenExpiresAt = Date.now() + (Number(data.expires_in || 86399) * 1000);
+    return cachedToken;
+  }
+
+  if (config.shopify.accessToken) return config.shopify.accessToken;
+  throw new Error('Shopify payment is not configured yet.');
+}
+
+async function shopifyHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'X-Shopify-Access-Token': await getAccessToken()
+  };
 }
 
 export function calculateOrderTotal(job, details) {
@@ -45,7 +94,7 @@ export function calculateOrderTotal(job, details) {
 }
 
 export async function createShopifyCheckout(job, details) {
-  if (!config.shopify.shop || !config.shopify.accessToken) {
+  if (!shopifyConfigured()) {
     throw new Error('Shopify payment is not configured yet.');
   }
 
@@ -97,7 +146,7 @@ export async function createShopifyCheckout(job, details) {
 
   const response = await fetch(shopifyUrl('/draft_orders.json'), {
     method: 'POST',
-    headers: shopifyHeaders(),
+    headers: await shopifyHeaders(),
     body: JSON.stringify(draftOrder)
   });
 
@@ -118,7 +167,7 @@ export async function createShopifyCheckout(job, details) {
 }
 
 export function verifyShopifyWebhook(payload, hmacHeader) {
-  const secret = config.shopify.webhookSecret;
+  const secret = webhookSigningSecret();
   if (!secret || !hmacHeader) return false;
   const body = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload || ''), 'utf8');
   const hash = crypto
@@ -135,11 +184,11 @@ export function verifyShopifyWebhook(payload, hmacHeader) {
 }
 
 export async function ensureOrdersPaidWebhook() {
-  if (!config.shopify.shop || !config.shopify.accessToken || !config.publicUrl) {
+  if (!shopifyConfigured() || !config.publicUrl) {
     return { ok: false, reason: 'Shopify or PUBLIC_URL is not configured.' };
   }
   const address = `${config.publicUrl.replace(/\/$/, '')}/api/webhooks/shopify/orders-paid`;
-  const listResponse = await fetch(shopifyUrl('/webhooks.json'), { headers: shopifyHeaders() });
+  const listResponse = await fetch(shopifyUrl('/webhooks.json'), { headers: await shopifyHeaders() });
   if (!listResponse.ok) {
     const body = await listResponse.text();
     return { ok: false, reason: `Could not list webhooks: ${listResponse.status} ${body}` };
@@ -150,7 +199,7 @@ export async function ensureOrdersPaidWebhook() {
 
   const createResponse = await fetch(shopifyUrl('/webhooks.json'), {
     method: 'POST',
-    headers: shopifyHeaders(),
+    headers: await shopifyHeaders(),
     body: JSON.stringify({
       webhook: {
         topic: 'orders/paid',

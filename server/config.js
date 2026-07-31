@@ -77,7 +77,9 @@ export const config = {
   shopify: {
     shop: process.env.SHOPIFY_SHOP || '',
     accessToken: process.env.SHOPIFY_ACCESS_TOKEN || '',
-    webhookSecret: process.env.SHOPIFY_WEBHOOK_SECRET || ''
+    clientId: process.env.SHOPIFY_CLIENT_ID || '',
+    clientSecret: process.env.SHOPIFY_CLIENT_SECRET || '',
+    webhookSecret: process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_CLIENT_SECRET || ''
   },
   admin: {
     password: process.env.ADMIN_PASSWORD || ''

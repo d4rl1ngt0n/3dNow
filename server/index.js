@@ -68,10 +68,11 @@ app.use('/api/payments', express.raw({ type: 'application/json' }), paymentsRout
 app.use('/api/webhooks/shopify', express.raw({ type: 'application/json' }), shopifyWebhooksRouter);
 app.use(express.json());
 app.get('/api/health', async (_, res) => {
+  const { shopifyConfigured } = await import('./services/shopify-checkout.js');
   res.json({
     ok: true,
     slicerAvailable: slicerAvailable(),
-    shopifyConfigured: Boolean(config.shopify.shop && config.shopify.accessToken)
+    shopifyConfigured: shopifyConfigured()
   });
 });
 app.get('/api/health/shopify', async (_, res) => {
@@ -116,17 +117,17 @@ app.get('*', (_, res) => res.sendFile(marketingSite));
 if (process.env.NODE_ENV !== 'test' && !process.argv.includes('--test')) {
   app.listen(config.port, () => {
     console.log(`3DNow site listening on ${config.port}`);
-    if (config.shopify.shop && config.shopify.accessToken) {
-      import('./services/shopify-checkout.js')
-        .then(({ ensureOrdersPaidWebhook }) => ensureOrdersPaidWebhook())
-        .then(result => {
-          if (result.ok) console.log(`Shopify orders/paid webhook ready at ${result.address}${result.created ? ' (created)' : ''}`);
-          else console.warn(`Shopify webhook setup: ${result.reason}`);
-        })
-        .catch(error => console.warn(`Shopify webhook setup failed: ${error.message}`));
-    } else {
-      console.warn('Shopify is not configured (SHOPIFY_SHOP / SHOPIFY_ACCESS_TOKEN). Student checkout will fail.');
-    }
+    import('./services/shopify-checkout.js')
+      .then(async ({ shopifyConfigured, ensureOrdersPaidWebhook }) => {
+        if (!shopifyConfigured()) {
+          console.warn('Shopify is not configured (SHOPIFY_SHOP + CLIENT_ID/SECRET or ACCESS_TOKEN). Student checkout will fail.');
+          return;
+        }
+        const result = await ensureOrdersPaidWebhook();
+        if (result.ok) console.log(`Shopify orders/paid webhook ready at ${result.address}${result.created ? ' (created)' : ''}`);
+        else console.warn(`Shopify webhook setup: ${result.reason}`);
+      })
+      .catch(error => console.warn(`Shopify webhook setup failed: ${error.message}`));
   });
 }
 
