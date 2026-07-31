@@ -65,9 +65,24 @@ async function getBrandLogo() {
 }
 
 app.use('/api/payments', express.raw({ type: 'application/json' }), paymentsRouter);
-app.use('/api/webhooks/shopify', express.json(), shopifyWebhooksRouter);
+app.use('/api/webhooks/shopify', express.raw({ type: 'application/json' }), shopifyWebhooksRouter);
 app.use(express.json());
-app.get('/api/health', (_, res) => res.json({ ok: true, slicerAvailable: slicerAvailable() }));
+app.get('/api/health', async (_, res) => {
+  res.json({
+    ok: true,
+    slicerAvailable: slicerAvailable(),
+    shopifyConfigured: Boolean(config.shopify.shop && config.shopify.accessToken)
+  });
+});
+app.get('/api/health/shopify', async (_, res) => {
+  try {
+    const { ensureOrdersPaidWebhook } = await import('./services/shopify-checkout.js');
+    const result = await ensureOrdersPaidWebhook();
+    res.status(result.ok ? 200 : 500).json(result);
+  } catch (error) {
+    res.status(500).json({ ok: false, reason: error.message });
+  }
+});
 app.get('/brand-logo', async (_, res) => {
   try {
     res.type('png').send(await getBrandLogo());
@@ -99,7 +114,20 @@ app.get(['/admin', '/admin/'], (_, res) => res.sendFile(adminApp, error => {
 app.get('*', (_, res) => res.sendFile(marketingSite));
 
 if (process.env.NODE_ENV !== 'test' && !process.argv.includes('--test')) {
-  app.listen(config.port, () => console.log(`3DNow site listening on ${config.port}`));
+  app.listen(config.port, () => {
+    console.log(`3DNow site listening on ${config.port}`);
+    if (config.shopify.shop && config.shopify.accessToken) {
+      import('./services/shopify-checkout.js')
+        .then(({ ensureOrdersPaidWebhook }) => ensureOrdersPaidWebhook())
+        .then(result => {
+          if (result.ok) console.log(`Shopify orders/paid webhook ready at ${result.address}${result.created ? ' (created)' : ''}`);
+          else console.warn(`Shopify webhook setup: ${result.reason}`);
+        })
+        .catch(error => console.warn(`Shopify webhook setup failed: ${error.message}`));
+    } else {
+      console.warn('Shopify is not configured (SHOPIFY_SHOP / SHOPIFY_ACCESS_TOKEN). Student checkout will fail.');
+    }
+  });
 }
 
 export default app;

@@ -75,7 +75,7 @@ export async function createShopifyCheckout(job, details) {
         requires_shipping: true,
         taxable: true
       }],
-      note: description,
+      note: `jobId=${job.id} | ${description}`,
       note_attributes: [
         { name: 'jobId', value: job.id },
         { name: 'filename', value: job.filename },
@@ -118,13 +118,51 @@ export async function createShopifyCheckout(job, details) {
 }
 
 export function verifyShopifyWebhook(payload, hmacHeader) {
-  const secret = config.shopify.accessToken;
+  const secret = config.shopify.webhookSecret;
+  if (!secret || !hmacHeader) return false;
+  const body = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload || ''), 'utf8');
   const hash = crypto
     .createHmac('sha256', secret)
-    .update(payload, 'utf8')
+    .update(body)
     .digest('base64');
-  return crypto.timingSafeEqual(
-    Buffer.from(hash),
-    Buffer.from(hmacHeader || '')
-  );
+  try {
+    const expected = Buffer.from(hash);
+    const received = Buffer.from(String(hmacHeader));
+    return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+  } catch {
+    return false;
+  }
+}
+
+export async function ensureOrdersPaidWebhook() {
+  if (!config.shopify.shop || !config.shopify.accessToken || !config.publicUrl) {
+    return { ok: false, reason: 'Shopify or PUBLIC_URL is not configured.' };
+  }
+  const address = `${config.publicUrl.replace(/\/$/, '')}/api/webhooks/shopify/orders-paid`;
+  const listResponse = await fetch(shopifyUrl('/webhooks.json'), { headers: shopifyHeaders() });
+  if (!listResponse.ok) {
+    const body = await listResponse.text();
+    return { ok: false, reason: `Could not list webhooks: ${listResponse.status} ${body}` };
+  }
+  const list = await listResponse.json();
+  const existing = (list.webhooks || []).find(hook => hook.topic === 'orders/paid' && hook.address === address);
+  if (existing) return { ok: true, id: existing.id, address, created: false };
+
+  const createResponse = await fetch(shopifyUrl('/webhooks.json'), {
+    method: 'POST',
+    headers: shopifyHeaders(),
+    body: JSON.stringify({
+      webhook: {
+        topic: 'orders/paid',
+        address,
+        format: 'json'
+      }
+    })
+  });
+  if (!createResponse.ok) {
+    const body = await createResponse.text();
+    return { ok: false, reason: `Could not create webhook: ${createResponse.status} ${body}` };
+  }
+  const created = await createResponse.json();
+  return { ok: true, id: created.webhook?.id, address, created: true };
 }

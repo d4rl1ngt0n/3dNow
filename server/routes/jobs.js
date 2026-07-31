@@ -589,6 +589,7 @@ jobsRouter.post('/:jobId/checkout-session', orderUpload.single('studentId'), asy
     job.orderDetails = details;
     job.studentIdFile = req.file || null;
     job.payment = { status: 'pending', shopifyDraftOrderId: checkout.id, totalCents: checkout.totalCents };
+    jobStore.touch(job.id);
     await registerCheckoutPending(job).catch(error => {
       console.error(`Order registry failed for checkout: ${error.message}`);
     });

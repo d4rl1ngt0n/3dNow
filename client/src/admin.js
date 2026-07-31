@@ -370,6 +370,14 @@ function renderDashboard() {
     });
   });
 
+  app.querySelectorAll('[data-packing-label]').forEach(button => {
+    button.addEventListener('click', () => {
+      const orderId = button.getAttribute('data-packing-label');
+      const target = state.orders.find(item => item.id === orderId) || order;
+      if (target) openPackingLabel(target);
+    });
+  });
+
   document.getElementById('notify-form')?.addEventListener('submit', async event => {
     event.preventDefault();
     if (!order) return;
@@ -400,9 +408,65 @@ function replaceOrder(order) {
   state.selectedId = order.id;
 }
 
+function formatShipping(address) {
+  if (!address) return 'n/a';
+  if (typeof address === 'string') return address;
+  return [
+    address.name,
+    address.line1 || address.address1,
+    address.line2 || address.address2,
+    [address.postal_code || address.zip, address.city].filter(Boolean).join(' '),
+    address.state || address.province,
+    address.country,
+    address.phone ? `Tel ${address.phone}` : null
+  ].filter(Boolean).join(', ');
+}
+
+function shopifyAdminOrderUrl(payment) {
+  if (!payment?.shopifyOrderId) return null;
+  return `https://admin.shopify.com/store/u06a18-ue/orders/${payment.shopifyOrderId}`;
+}
+
+function packingLabelHtml(order) {
+  const details = order.details || {};
+  const payment = order.payment || {};
+  const shipping = formatShipping(payment.shippingAddress);
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Packing label ${escapeHtml(payment.shopifyOrderName || order.id)}</title>
+<style>
+  body{font-family:system-ui,sans-serif;margin:24px;color:#111}
+  h1{font-size:20px;margin:0 0 12px}
+  .box{border:2px solid #111;padding:16px;max-width:420px}
+  .row{margin:8px 0;font-size:14px}
+  .label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#555}
+  @media print{body{margin:0}.noprint{display:none}}
+</style></head><body>
+<div class="noprint" style="margin-bottom:12px"><button onclick="window.print()">Print packing label</button></div>
+<div class="box">
+  <h1>3DNow student print</h1>
+  <div class="row"><div class="label">Shopify order</div><strong>${escapeHtml(payment.shopifyOrderName || 'n/a')}</strong></div>
+  <div class="row"><div class="label">Ship to</div>${escapeHtml(shipping)}</div>
+  <div class="row"><div class="label">File / package</div>${escapeHtml(order.filename || 'n/a')} · ${escapeHtml(details.packageName || 'n/a')}</div>
+  <div class="row"><div class="label">Material / speed</div>${escapeHtml(details.material || 'n/a')} · ${escapeHtml(details.speed || 'standard')}</div>
+  <div class="row"><div class="label">Paid</div>${escapeHtml(payment.totalCents != null ? formatMoney(payment.totalCents) : 'n/a')}</div>
+  <div class="row"><div class="label">Admin ID</div>${escapeHtml(order.id)}</div>
+</div>
+</body></html>`;
+}
+
+function openPackingLabel(order) {
+  const popup = window.open('', '_blank', 'noopener,noreferrer,width=520,height=720');
+  if (!popup) {
+    showToast('Allow pop-ups to print the packing label.');
+    return;
+  }
+  popup.document.write(packingLabelHtml(order));
+  popup.document.close();
+}
+
 function renderDetail(order) {
   const details = order.details || {};
   const payment = order.payment || {};
+  const shopifyUrl = shopifyAdminOrderUrl(payment);
   return `
     <div class="detail-grid">
       <div>
@@ -419,10 +483,21 @@ function renderDetail(order) {
           <dt>Email</dt><dd>${escapeHtml(order.customer?.email || 'n/a')}</dd>
           <dt>Phone</dt><dd>${escapeHtml(order.customer?.phone || 'n/a')}</dd>
           <dt>Payment</dt><dd>${escapeHtml(payment.status || 'n/a')}${payment.totalCents != null ? ` · ${formatMoney(payment.totalCents)}` : ''}</dd>
+          <dt>Shopify</dt><dd>${payment.shopifyOrderName
+            ? (shopifyUrl
+              ? `<a href="${escapeHtml(shopifyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(payment.shopifyOrderName)}</a>`
+              : escapeHtml(payment.shopifyOrderName))
+            : escapeHtml(payment.shopifyDraftOrderId ? `Draft ${payment.shopifyDraftOrderId}` : 'n/a')}</dd>
+          <dt>Shipping</dt><dd>${escapeHtml(formatShipping(payment.shippingAddress))}</dd>
           <dt>Package</dt><dd>${escapeHtml(details.packageName || order.quote?.package?.name || order.quote?.totalFormatted || 'n/a')}</dd>
           <dt>Material</dt><dd>${escapeHtml(details.material || 'n/a')}</dd>
           <dt>Quantity</dt><dd>${escapeHtml(details.quantity ?? 'n/a')}</dd>
         </dl>
+        ${order.type === 'student-order' ? `
+          <div class="actions" style="margin-top:12px">
+            <button class="btn" type="button" data-packing-label="${order.id}">Print packing label</button>
+          </div>
+        ` : ''}
       </div>
 
       ${order.files?.length ? `

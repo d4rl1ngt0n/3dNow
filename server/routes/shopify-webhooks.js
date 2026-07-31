@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { jobStore } from '../services/job-store.js';
 import { sendAdminEmail, sendCustomerOrderConfirmation } from '../services/mail.js';
-import { registerPaidStudentOrder } from '../services/orders.js';
+import { markStudentOrderPaidFromShopify } from '../services/orders.js';
+import { verifyShopifyWebhook } from '../services/shopify-checkout.js';
+import { config } from '../config.js';
 
 function formatAddress(address) {
   if (!address) return 'Not provided';
@@ -10,20 +12,36 @@ function formatAddress(address) {
     .join(', ');
 }
 
-async function notifyPaidOrder(job, order) {
-  const details = job.orderDetails || {};
+function shippingFromShopify(order) {
+  const address = order.shipping_address;
+  if (!address) return null;
+  return {
+    name: address.name || [address.first_name, address.last_name].filter(Boolean).join(' ') || null,
+    line1: address.address1 || null,
+    line2: address.address2 || null,
+    postal_code: address.zip || null,
+    city: address.city || null,
+    state: address.province || null,
+    country: address.country || null,
+    phone: address.phone || null
+  };
+}
+
+async function notifyPaidOrder({ job, orderRecord, order }) {
+  const details = job?.orderDetails || orderRecord?.details || {};
   const shippingAddress = formatAddress(order.shipping_address);
-  const customerEmail = order.email || order.contact_email || details.contactEmail;
+  const customerEmail = order.email || order.contact_email || details.contactEmail || orderRecord?.customer?.email;
   const totalCents = Math.round(parseFloat(order.total_price || '0') * 100);
+  const filename = job?.filename || orderRecord?.filename || order.name || 'order';
 
   const lines = [
-    `Job ID: ${job.id}`,
+    `Job ID: ${job?.id || orderRecord?.jobId || 'n/a'}`,
     `Payment status: paid`,
     `Shopify order: ${order.name || order.id}`,
-    `File: ${job.filename}`,
-    `Package: ${details.packageName || job.quote?.package?.name || 'Manual review'}`,
+    `File: ${filename}`,
+    `Package: ${details.packageName || job?.quote?.package?.name || 'Manual review'}`,
     `Amount paid: EUR${(totalCents / 100).toFixed(2)}`,
-    `Requested material: ${job.requestedMaterial || job.material}`,
+    `Requested material: ${details.material || job?.requestedMaterial || job?.material || 'n/a'}`,
     `Engineering support: ${details.engineering || 'None'}`,
     `Production speed: ${details.speed || 'standard'}`,
     `Verification: ${details.verificationMethod || 'Not provided'}`,
@@ -33,16 +51,16 @@ async function notifyPaidOrder(job, order) {
   ];
 
   await sendAdminEmail({
-    subject: `3DNow paid student print order: ${job.filename}`,
+    subject: `3DNow paid student print order: ${filename}`,
     lines,
-    files: [job.upload, job.studentIdFile]
+    files: job ? [job.upload, job.studentIdFile] : (orderRecord?.files || [])
   });
 
   if (customerEmail) {
     await sendCustomerOrderConfirmation({
       email: customerEmail,
-      filename: job.filename,
-      packageName: details.packageName || job.quote?.package?.name,
+      filename,
+      packageName: details.packageName || job?.quote?.package?.name,
       totalCents,
       shippingAddress
     });
@@ -52,9 +70,23 @@ async function notifyPaidOrder(job, order) {
 export const shopifyWebhooksRouter = Router();
 
 shopifyWebhooksRouter.post('/orders-paid', async (req, res) => {
+  const rawBody = Buffer.isBuffer(req.body)
+    ? req.body
+    : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}), 'utf8');
+  const hmac = req.get('X-Shopify-Hmac-Sha256');
+
+  if (config.shopify.webhookSecret) {
+    if (!verifyShopifyWebhook(rawBody, hmac)) {
+      console.error('Shopify webhook HMAC verification failed.');
+      return res.status(401).send('Invalid webhook signature');
+    }
+  } else {
+    console.warn('SHOPIFY_WEBHOOK_SECRET is not set. Accepting webhook without HMAC verification.');
+  }
+
   let order;
   try {
-    order = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    order = JSON.parse(rawBody.toString('utf8'));
   } catch {
     return res.status(400).send('Invalid JSON');
   }
@@ -62,56 +94,49 @@ shopifyWebhooksRouter.post('/orders-paid', async (req, res) => {
   if (!order || order.financial_status !== 'paid') return res.json({ received: true });
 
   const noteAttrs = order.note_attributes || [];
-  const jobId = noteAttrs.find(a => a.name === 'jobId')?.value;
+  const jobId = noteAttrs.find(a => a.name === 'jobId')?.value
+    || (typeof order.note === 'string' ? order.note.match(/jobId[=:\s]+([a-zA-Z0-9_-]+)/)?.[1] : null);
   if (!jobId) {
     console.log('Shopify webhook: no jobId in note_attributes, skipping.');
     return res.json({ received: true });
   }
 
   const job = jobStore.get(jobId);
-  if (!job) {
-    console.log(`Shopify webhook: job ${jobId} not found in memory.`);
-    return res.json({ received: true });
-  }
-  if (job.payment?.status === 'paid') return res.json({ received: true });
+  if (job?.payment?.status === 'paid') return res.json({ received: true });
 
   const totalCents = Math.round(parseFloat(order.total_price || '0') * 100);
-  job.payment = {
-    ...job.payment,
-    status: 'paid',
-    shopifyOrderId: String(order.id),
-    shopifyOrderName: order.name,
-    totalCents,
-    paidAt: new Date().toISOString()
-  };
+  const shipping = shippingFromShopify(order);
+  const paidAt = new Date().toISOString();
 
-  const fakeSession = {
-    id: `shopify-${order.id}`,
-    amount_total: totalCents,
-    customer_details: {
-      email: order.email || order.contact_email,
-      name: order.shipping_address?.name || order.billing_address?.name || null
-    },
-    shipping_details: {
-      address: order.shipping_address ? {
-        line1: order.shipping_address.address1,
-        line2: order.shipping_address.address2,
-        postal_code: order.shipping_address.zip,
-        city: order.shipping_address.city,
-        state: order.shipping_address.province,
-        country: order.shipping_address.country
-      } : null
-    }
-  };
+  if (job) {
+    job.payment = {
+      ...job.payment,
+      status: 'paid',
+      shopifyOrderId: String(order.id),
+      shopifyOrderName: order.name,
+      totalCents,
+      paidAt,
+      shippingAddress: shipping
+    };
+    jobStore.touch(job.id);
+  }
 
+  let orderRecord = null;
   try {
-    await registerPaidStudentOrder(job, fakeSession);
+    orderRecord = await markStudentOrderPaidFromShopify({
+      jobId,
+      job,
+      shopifyOrder: order,
+      totalCents,
+      shippingAddress: shipping,
+      paidAt
+    });
   } catch (error) {
     console.error(`Order registry failed for paid order: ${error.message}`);
   }
 
   try {
-    await notifyPaidOrder(job, order);
+    await notifyPaidOrder({ job, orderRecord, order });
   } catch (error) {
     console.error(`Paid order notification failed: ${error.message}`);
   }

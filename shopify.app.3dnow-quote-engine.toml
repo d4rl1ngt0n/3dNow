@@ -7,7 +7,7 @@ embedded = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_draft_orders,read_orders"
+scopes = "write_draft_orders,read_orders,write_webhooks,read_webhooks"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 

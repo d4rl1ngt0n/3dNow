@@ -121,7 +121,7 @@ export async function registerCheckoutPending(job) {
       contactMethod: details.contactMethod || null
     },
     files: [fileRef(job.upload), fileRef(job.studentIdFile)].filter(Boolean),
-    historyNote: 'Stripe checkout started'
+    historyNote: 'Shopify checkout started'
   };
 
   if (existing) {
@@ -160,7 +160,10 @@ export async function registerPaidStudentOrder(job, session) {
       sessionId: session?.id || job.payment?.sessionId || null,
       totalCents: session?.amount_total ?? job.payment?.totalCents ?? null,
       paidAt: job.payment?.paidAt || new Date().toISOString(),
-      shippingAddress: session?.shipping_details?.address || null
+      shippingAddress: session?.shipping_details?.address || job.payment?.shippingAddress || null,
+      shopifyDraftOrderId: job.payment?.shopifyDraftOrderId || null,
+      shopifyOrderId: job.payment?.shopifyOrderId || null,
+      shopifyOrderName: job.payment?.shopifyOrderName || null
     },
     quote: job.quote || null,
     details: {
@@ -187,6 +190,90 @@ export async function registerPaidStudentOrder(job, session) {
       summary: payload.summary
     });
   }
+  return orderStore.create(payload);
+}
+
+export async function markStudentOrderPaidFromShopify({
+  jobId,
+  job = null,
+  shopifyOrder,
+  totalCents,
+  shippingAddress,
+  paidAt
+}) {
+  const existing = await orderStore.findByJobId(jobId);
+  const details = job?.orderDetails || existing?.details || {};
+  const noteAttrs = shopifyOrder?.note_attributes || [];
+  const attr = name => noteAttrs.find(item => item.name === name)?.value || null;
+  const customerEmail = shopifyOrder?.email
+    || shopifyOrder?.contact_email
+    || details.contactEmail
+    || existing?.customer?.email
+    || null;
+  const customerName = shippingAddress?.name
+    || [shopifyOrder?.shipping_address?.first_name, shopifyOrder?.shipping_address?.last_name].filter(Boolean).join(' ')
+    || existing?.customer?.name
+    || null;
+  const filename = job?.filename || existing?.filename || attr('filename') || shopifyOrder?.name || 'order';
+  const packageName = details.packageName
+    || job?.quote?.package?.name
+    || attr('package')
+    || existing?.details?.packageName
+    || null;
+
+  const payload = {
+    type: 'student-order',
+    flow: 'student',
+    status: 'paid',
+    summary: `Paid student print · ${filename}`,
+    filename,
+    jobId,
+    customer: {
+      name: customerName,
+      email: customerEmail,
+      phone: details.contactPhone || existing?.customer?.phone || shopifyOrder?.shipping_address?.phone || null
+    },
+    payment: {
+      status: 'paid',
+      sessionId: `shopify-${shopifyOrder?.id || ''}`,
+      totalCents: totalCents ?? existing?.payment?.totalCents ?? null,
+      paidAt: paidAt || new Date().toISOString(),
+      shippingAddress: shippingAddress || existing?.payment?.shippingAddress || null,
+      shopifyDraftOrderId: job?.payment?.shopifyDraftOrderId || existing?.payment?.shopifyDraftOrderId || null,
+      shopifyOrderId: shopifyOrder?.id != null ? String(shopifyOrder.id) : existing?.payment?.shopifyOrderId || null,
+      shopifyOrderName: shopifyOrder?.name || existing?.payment?.shopifyOrderName || null
+    },
+    quote: job?.quote || existing?.quote || null,
+    details: {
+      packageName,
+      material: details.material || job?.requestedMaterial || job?.material || attr('material') || existing?.details?.material || null,
+      engineering: details.engineering || attr('engineering') || existing?.details?.engineering || null,
+      speed: details.speed || attr('speed') || existing?.details?.speed || 'standard',
+      verificationMethod: details.verificationMethod || attr('verificationMethod') || existing?.details?.verificationMethod || null,
+      universityEmail: details.universityEmail || attr('universityEmail') || existing?.details?.universityEmail || null
+    },
+    files: job
+      ? [fileRef(job.upload), fileRef(job.studentIdFile)].filter(Boolean)
+      : (existing?.files || []),
+    historyNote: 'Shopify payment confirmed'
+  };
+
+  if (existing) {
+    if (existing.status === 'paid' && existing.payment?.shopifyOrderId) {
+      return orderStore.get(existing.id);
+    }
+    return orderStore.update(existing.id, {
+      status: 'paid',
+      statusNote: 'Shopify payment confirmed',
+      payment: payload.payment,
+      customer: payload.customer,
+      details: payload.details,
+      quote: payload.quote,
+      files: payload.files?.length ? payload.files : undefined,
+      summary: payload.summary
+    });
+  }
+
   return orderStore.create(payload);
 }
 
