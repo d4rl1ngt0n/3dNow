@@ -3,10 +3,11 @@ export const MATERIALS = { PLA: { densityGcm3: 1.24, ratePerCm3: .08 }, PETG: { 
 
 export function businessQuantityMultiplier(quantity) {
   if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Business quantity must be at least one.');
-  if (quantity <= 20) return 4;
-  if (quantity <= 50) return 3;
-  if (quantity <= 99) return 2.5;
-  return 1.8;
+  // Ben: ×1.8 for 100+ · ×2.5 for 50+ · ×3 for 20+ · else ×4
+  if (quantity >= 100) return 1.8;
+  if (quantity >= 50) return 2.5;
+  if (quantity >= 20) return 3;
+  return 4;
 }
 
 export function businessQuote({ printTimeSec, printer, quantity, speed = 'standard', engineering = null }) {

@@ -1,2 +1,2 @@
-import test from 'node:test';import assert from 'node:assert/strict';import { studentQuote } from '../server/services/quote.js';const p={id:'p1s',name:'P1S',ratePerHour:12};
+import test from 'node:test';import assert from 'node:assert/strict';import { studentQuote } from '../server/services/quote.js';const p={id:'p1s',name:'P1S',ratePerHour:.12};
 for(const [w,name] of [[150,'Basic'],[150.1,'Medium'],[300,'Medium'],[300.1,'Large']])test(`${w} g selects ${name}`,()=>{const q=studentQuote({material:'PLA',weightG:w,printTimeSec:3600,printer:p});assert.equal(q.package.name,name);assert.equal(q.total,q.package.price);assert.equal(q.flow,'student');});

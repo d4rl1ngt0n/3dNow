@@ -3,14 +3,18 @@ import assert from 'node:assert/strict';
 import { printerFromMetadata, routePrinter } from '../server/services/printer.js';
 
 test('uses declared sliced printer metadata and hourly rates', () => {
-  assert.equal(printerFromMetadata('Bambu Lab P1S').ratePerHour, 12);
-  assert.equal(printerFromMetadata('Bambu Lab A2L').ratePerHour, 30);
-  assert.equal(printerFromMetadata('Bambu Lab H2S').ratePerHour, 30);
-  assert.equal(printerFromMetadata('One Pro belt printer').ratePerHour, 30);
+  assert.equal(printerFromMetadata('Bambu Lab P1S').ratePerHour, 0.12);
+  assert.equal(printerFromMetadata('Bambu Lab A2L').ratePerHour, 0.30);
+  assert.equal(printerFromMetadata('Bambu Lab H2S').ratePerHour, 0.30);
+  assert.equal(printerFromMetadata('One Pro belt printer').ratePerHour, 0.30);
 });
 
-test('P1S accepts models within its full build volume', () => {
-  assert.equal(routePrinter({ x: 256, y: 256, z: 256 }).printer.id, 'p1s');
+test('P1S accepts models under 250 mm', () => {
+  assert.equal(routePrinter({ x: 249.9, y: 249.9, z: 249.9 }).printer.id, 'p1s');
+});
+
+test('a model at or beyond 250 mm routes off P1S', () => {
+  assert.equal(routePrinter({ x: 250, y: 100, z: 100 }).printer.id, 'a2l');
 });
 
 test('a model beyond the P1S volume routes to A2L', () => {
