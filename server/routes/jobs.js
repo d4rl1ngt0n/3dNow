@@ -545,7 +545,7 @@ jobsRouter.post('/:jobId/checkout-session', orderUpload.single('studentId'), asy
     return res.status(400).json({ error: 'A student ID file is required for ID verification.' });
   }
   if (details.verificationMethod === 'email' && !isEligibleStudentEmail(details.universityEmail)) {
-    return res.status(400).json({ error: 'Enter a valid .edu, school, college or university email address.' });
+    return res.status(400).json({ error: 'Enter a valid university or school email (.edu, .de, .ac.uk, …). Personal providers like Gmail, GMX or Web.de are not accepted.' });
   }
   if (details.contactMethod === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.contactEmail || '')) {
     return res.status(400).json({ error: 'A valid contact email address is required.' });

@@ -153,8 +153,24 @@ function placeMeshOnBed(printer) {
 }
 
 function isEligibleStudentEmail(email) {
-  const [, domain = ''] = email.trim().toLowerCase().match(/^[^\s@]+@([^\s@]+\.[^\s@]+)$/) || [];
-  return domain.endsWith('.edu') || /\.ac\.[a-z]{2,}$/.test(domain) || /(university|college|school|academy|hochschule|(^|[.-])uni([.-]|$))/.test(domain);
+  const match = String(email || '').trim().toLowerCase().match(/^[^\s@]+@([^\s@]+\.[^\s@]+)$/);
+  if (!match) return false;
+  const domain = match[1];
+  const consumer = new Set([
+    'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.de', 'hotmail.com', 'hotmail.de',
+    'outlook.com', 'outlook.de', 'live.com', 'live.de', 'msn.com', 'icloud.com', 'me.com', 'mac.com',
+    'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.de', 'gmx.net', 'gmx.at', 'gmx.ch',
+    'web.de', 't-online.de', 'mail.com', 'mail.de', 'email.de', 'freenet.de', 'online.de', 'arcor.de',
+    'posteo.de', 'mailbox.org', 'yandex.com', 'yandex.ru', 'zoho.com', 'fastmail.com'
+  ]);
+  if (consumer.has(domain)) return false;
+  if (domain.endsWith('.edu') || domain.includes('.edu.')) return true;
+  if (/\.ac\.[a-z]{2,}$/.test(domain)) return true;
+  if (/(university|universit|college|school|schule|academy|hochschule|studium|student|(^|[.-])(uni|fh|th|htw|hfu|hsa|hsb)([.-]|$))/i.test(domain)) {
+    return true;
+  }
+  const tld = domain.split('.').pop();
+  return tld === 'de' || tld === 'at' || tld === 'ch';
 }
 
 function updateSwatchSelection(selected) {
@@ -405,7 +421,7 @@ function missingRequirements(values = requestValues()) {
   if (!request.verification) missing.push('Choose a student verification method');
   else if (request.verification === 'email' && !values.universityEmail) missing.push('Enter your university email');
   else if (request.verification === 'email' && !isEligibleStudentEmail(values.universityEmail)) {
-    missing.push('Enter a valid school or university email');
+    missing.push('Enter a valid university or school email (.edu / .de). Personal inboxes like Gmail are not accepted');
   } else if (request.verification === 'id' && !values.studentId) {
     missing.push('Upload your student ID');
   }
@@ -449,7 +465,7 @@ function updateStudentEmailVerification(universityEmail) {
   status.classList.toggle('is-invalid', selected && hasEmail && !verified);
   status.textContent = verified
     ? 'Student email verified. You can proceed to payment.'
-    : 'Enter a valid .edu, school, college or university email address.';
+    : 'Personal email providers are not accepted. Use your university or school address (.edu, .de, .ac.uk, …).';
 }
 
 function updatePrivateDisclaimer() {

@@ -40,8 +40,29 @@ export function businessQuote({ printTimeSec, printer, quantity, speed = 'standa
 
 export function studentQuote({ material, weightG, printTimeSec, printer }) {
   if (!Number.isFinite(weightG) || !printer) return null;
-  const packageInfo = weightG <= 150 ? { name: 'Basic', minWeightG: 0, maxWeightG: 150, price: 39 } : weightG <= 300 ? { name: 'Medium', minWeightG: 150, maxWeightG: 300, price: 69 } : { name: 'Large', minWeightG: 300, maxWeightG: null, price: 89 };
+  // Student package price is weight-only. Speed / expert review / editing are add-ons at checkout.
+  // Basic: up to 150 g · Medium: up to 300 g · Large: above 300 g
+  const packageInfo = weightG <= 150
+    ? { name: 'Basic', minWeightG: 0, maxWeightG: 150, price: 39 }
+    : weightG <= 300
+      ? { name: 'Medium', minWeightG: 150, maxWeightG: 300, price: 69 }
+      : { name: 'Large', minWeightG: 300, maxWeightG: null, price: 89 };
   const printHours = Number(((printTimeSec || 0) / 3600).toFixed(2));
   const selected = PRINTERS[printer.id] || printer;
-  return { currency: 'EUR', flow: 'student', material, weightG, package: packageInfo, printer: { id: selected.id, name: selected.name, ratePerHour: selected.ratePerHour, printHours, machineFee: Number((printHours * selected.ratePerHour).toFixed(2)) }, total: packageInfo.price, totalFormatted: `${packageInfo.price.toFixed(2).replace('.', ',')} €` };
+  return {
+    currency: 'EUR',
+    flow: 'student',
+    material,
+    weightG,
+    package: packageInfo,
+    printer: {
+      id: selected.id,
+      name: selected.name,
+      ratePerHour: selected.ratePerHour,
+      printHours,
+      machineFee: Number((printHours * selected.ratePerHour).toFixed(2))
+    },
+    total: packageInfo.price,
+    totalFormatted: `${packageInfo.price.toFixed(2).replace('.', ',')} €`
+  };
 }

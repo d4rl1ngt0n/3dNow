@@ -5,13 +5,19 @@ import { isEligibleStudentEmail } from '../server/services/student-email.js';
 
 const job = { quote: { total: 39, package: { name: 'Basic' } } };
 
-test('accepts .edu and recognized school email domains', () => {
+test('accepts .edu, institutional .de and recognized school domains', () => {
   assert.equal(isEligibleStudentEmail('student@example.edu'), true);
   assert.equal(isEligibleStudentEmail('student@uni-duesseldorf.de'), true);
+  assert.equal(isEligibleStudentEmail('student@tum.de'), true);
   assert.equal(isEligibleStudentEmail('student@college.ac.uk'), true);
+  assert.equal(isEligibleStudentEmail('name@ethz.ch'), true);
 });
 
 test('rejects personal and malformed email domains', () => {
+  assert.equal(isEligibleStudentEmail('student@gmail.com'), false);
+  assert.equal(isEligibleStudentEmail('student@gmx.de'), false);
+  assert.equal(isEligibleStudentEmail('student@web.de'), false);
+  assert.equal(isEligibleStudentEmail('student@yahoo.com'), false);
   assert.equal(isEligibleStudentEmail('student@example.com'), false);
   assert.equal(isEligibleStudentEmail('student@'), false);
 });
