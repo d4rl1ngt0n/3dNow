@@ -3,6 +3,9 @@ import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const root = path.resolve(import.meta.dirname, '..');
+const storageRoot = process.env.STORAGE_ROOT
+  ? path.resolve(process.env.STORAGE_ROOT)
+  : path.join(root, 'server');
 
 // Probe with --help: Mac app builds reject --version (exit 1) even though CLI slicing works.
 function commandWorks(command) {
@@ -52,9 +55,10 @@ export const config = {
   sliceTimeoutMs: Number(process.env.SLICE_TIMEOUT_MS || 600000),
   sliceThreads: Number(process.env.SLICE_THREADS || 4),
   profiles: path.join(root, 'server/slicer-profiles'),
-  uploads: path.join(root, 'server/uploads'),
-  submissions: path.join(root, 'server/submissions'),
-  output: path.join(root, 'server/output/gcode'),
+  uploads: path.join(storageRoot, 'uploads'),
+  submissions: path.join(storageRoot, 'submissions'),
+  output: path.join(storageRoot, 'output', 'gcode'),
+  dataDir: path.join(storageRoot, 'data'),
   notifyTo: process.env.NOTIFY_TO || 'freddarlington98@gmail.com',
   smtp: {
     host: process.env.SMTP_HOST || '',
@@ -69,5 +73,12 @@ export const config = {
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || ''
+  },
+  shopify: {
+    shop: process.env.SHOPIFY_SHOP || '',
+    accessToken: process.env.SHOPIFY_ACCESS_TOKEN || ''
+  },
+  admin: {
+    password: process.env.ADMIN_PASSWORD || ''
   }
 };

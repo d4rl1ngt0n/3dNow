@@ -215,3 +215,21 @@ export async function sendCustomerContactConfirmation({ email, name }) {
     ]
   });
 }
+
+export async function sendCustomerStatusUpdate({ email, name, statusLabel, message, filename }) {
+  const greeting = name ? `Hi ${name},` : 'Hi,';
+  return sendEmail({
+    to: email,
+    subject: `3DNow update: ${statusLabel}`,
+    lines: [
+      greeting,
+      '',
+      message,
+      filename ? `File: ${filename}` : '',
+      '',
+      'If you have questions, reply to this email or contact us via 3d-now.de.',
+      '',
+      '3DNow'
+    ].filter(line => line !== '')
+  });
+}

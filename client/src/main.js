@@ -13,6 +13,16 @@ import './styles.css';
 const TERMINAL_JOB = new Set(['ready', 'manual-review', 'error']);
 const ACTIVE_SLICE = new Set(['queued', 'analyzing', 'slicing']);
 
+const embedMode = new URLSearchParams(window.location.search).has('embed')
+  || (window.self !== window.top);
+if (embedMode) {
+  document.documentElement.classList.add('embed-mode');
+  document.body?.classList.add('embed-mode');
+  window.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('embed-mode');
+  });
+}
+
 if (window.location.pathname === '/quote-engine-business') {
   void import('./business.js');
 }

@@ -2,16 +2,15 @@ services:
   quote-engine:
     build: .
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
     environment:
       PORT: "3000"
       PRUSA_SLICER_PATH: prusa-slicer
       SLICE_TIMEOUT_MS: "600000"
       SLICE_THREADS: "4"
+      STORAGE_ROOT: /var/lib/3dnow
     volumes:
-      - quote-uploads:/app/server/uploads
-      - quote-output:/app/server/output/gcode
-
-volumes:
-  quote-uploads:
-  quote-output:
+      - /var/lib/3dnow:/var/lib/3dnow
+    restart: unless-stopped

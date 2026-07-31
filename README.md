@@ -26,6 +26,23 @@ Every quote-engine upload and quote result sends an operational notification to 
 
 Never commit `.env` or SMTP credentials.
 
+## Operations dashboard
+
+Set `ADMIN_PASSWORD` in `.env`, then open:
+
+```text
+http://localhost:3000/admin
+```
+
+The dashboard stores every inbound request (student checkouts, business/private quotes, contact and design forms) in `server/data/orders.json`. From there you can:
+
+- browse and filter the inbox
+- open request details and download uploaded files
+- move orders through production statuses
+- email the customer when a status changes (completed, shipped, ready for pickup, and more)
+
+Production statuses: new, reviewing, quoted, awaiting-payment, paid, in-production, completed, shipped, ready-pickup, cancelled.
+
 ## Stripe payment checkout
 
 Student orders use Stripe Checkout after a verified quote and school-email or student-ID verification. Stripe collects the shipping and billing addresses, then the Stripe webhook sends the final customer and admin emails after the payment succeeds.

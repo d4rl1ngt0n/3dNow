@@ -6,6 +6,8 @@ server/submissions/*
 !server/submissions/.gitkeep
 server/output/gcode/*
 !server/output/gcode/.gitkeep
+server/data/*
+!server/data/.gitkeep
 .env
 
 .DS_Store

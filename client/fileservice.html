@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="description" content="Noch keine 3D-Datei? Schick uns Foto oder Skizze, wir helfen beim Modell."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <title>3DNow Design-Service</title>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="https://3d-now.de/" aria-label="3d-now.de home"><span class="brand-stack"><img class="brand-logo" src="/brand-logo" alt="3dnow.eu"><span class="brand-tagline">by iFactory3D</span></span></a>
+        <a class="signin" href="https://3d-now.de/pages/contact">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+  <main class="fileservice-main">
+    <section class="intro">
+      <p class="eyebrow">Noch keine 3D-Datei?</p>
+      <h1>Wir helfen dir beim Modell.</h1>
+      <p>Lade ein Foto, eine Skizze oder eine Vorlage hoch und beschreibe deine Idee. Wir prüfen sie und melden uns mit den nächsten Schritten.</p>
+    </section>
+    <section class="fileservice-panel" aria-label="Design request form">
+      <form id="idea-form" class="idea-form" novalidate>
+        <div class="field-row">
+          <label class="field">Name
+            <input id="idea-name" name="name" type="text" required autocomplete="name" placeholder="Dein Name"/>
+          </label>
+          <label class="field">E-Mail
+            <input id="idea-email" name="email" type="email" required autocomplete="email" placeholder="name@beispiel.de"/>
+          </label>
+        </div>
+        <label class="field">Telefon / WhatsApp
+          <input id="idea-phone" name="phone" type="tel" autocomplete="tel" placeholder="+49 170 1234567"/>
+          <span class="quiet">Bitte eine Nummer, die über WhatsApp erreichbar ist.</span>
+        </label>
+        <label class="field">Foto oder Vorlage
+          <input id="idea-file" name="reference" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/*"/>
+          <span class="quiet">JPG, PNG, WEBP oder PDF, optional.</span>
+        </label>
+        <label class="field">Beschreibe deine Idee
+          <textarea id="idea-desc" name="description" required rows="5" placeholder="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…"></textarea>
+        </label>
+        <label class="field">Wunschtermin
+          <input id="idea-deadline" name="deadline" type="date"/>
+        </label>
+        <button class="btn btn-primary" id="idea-submit" type="submit">Idee senden</button>
+        <p id="idea-status" class="idea-status" role="status" aria-live="polite"></p>
+        <p id="idea-ok" class="form-ok" hidden>Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.</p>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="/src/fileservice.js"></script>
+</body>
+</html>

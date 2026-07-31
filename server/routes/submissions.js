@@ -2,6 +2,11 @@ import { Router } from 'express';
 import multer from 'multer';
 import { config } from '../config.js';
 import { sendAdminEmail, sendCustomerContactConfirmation, sendCustomerIdeaConfirmation } from '../services/mail.js';
+import {
+  registerContactSubmission,
+  registerIdeaSubmission,
+  registerLegacyOrderSubmission
+} from '../services/orders.js';
 
 const upload = multer({ dest: config.submissions, limits: { fileSize: config.uploadLimit } });
 export const submissionsRouter = Router();
@@ -28,10 +33,15 @@ submissionsRouter.post('/contact', async (req, res) => {
     return res.status(400).json({ error: 'Name, a valid email address, and a message are required.' });
   }
 
+  const phone = text(req.body.phone);
+  await registerContactSubmission({ name, email, phone, message }).catch(error => {
+    console.error(`Order registry failed for contact: ${error.message}`);
+  });
+
   const [adminResult, customerResult] = await Promise.allSettled([
     sendAdminEmail({
       subject: `3DNow contact request from ${name}`,
-      lines: ['Type: Contact request', `Name: ${name}`, `Email: ${email}`, `Phone: ${text(req.body.phone) || 'Not provided'}`, '', 'Message:', message]
+      lines: ['Type: Contact request', `Name: ${name}`, `Email: ${email}`, `Phone: ${phone || 'Not provided'}`, '', 'Message:', message]
     }),
     sendCustomerContactConfirmation({ email, name })
   ]);
@@ -69,6 +79,17 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
     }
   }
 
+  await registerIdeaSubmission({
+    name,
+    email,
+    phone,
+    description,
+    deadline,
+    file: req.file
+  }).catch(error => {
+    console.error(`Order registry failed for idea: ${error.message}`);
+  });
+
   const [adminResult, customerResult] = await Promise.allSettled([
     sendAdminEmail({
       subject: `3DNow design request from ${name}`,
@@ -103,6 +124,17 @@ submissionsRouter.post('/orders', upload.fields([{ name: 'model', maxCount: 1 },
     ...(req.files?.model || []),
     ...(req.files?.studentId || [])
   ];
+
+  await registerLegacyOrderSubmission({
+    flow,
+    contactEmail,
+    contactPhone,
+    configuration,
+    files
+  }).catch(error => {
+    console.error(`Order registry failed for legacy order: ${error.message}`);
+  });
+
   return notify(res, {
     subject: `3DNow ${flow} ${flow === 'business' ? 'quote request' : 'order request'}`,
     lines: ['Type: Order configuration', `Flow: ${flow}`, `Contact email: ${contactEmail || 'Not provided'}`, `Contact phone: ${contactPhone || 'Not provided'}`, '', 'Configuration:', configuration],

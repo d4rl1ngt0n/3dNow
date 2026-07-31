@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { jobStore } from '../services/job-store.js';
 import { sendAdminEmail, sendCustomerOrderConfirmation } from '../services/mail.js';
 import { verifyWebhook } from '../services/payments.js';
+import { registerPaidStudentOrder } from '../services/orders.js';
 
 function formatAddress(address) {
   if (!address) return 'Not provided';
@@ -77,6 +78,12 @@ paymentsRouter.post('/webhook', async (req, res) => {
     totalCents: session.amount_total,
     paidAt: new Date().toISOString()
   };
+
+  try {
+    await registerPaidStudentOrder(job, session);
+  } catch (error) {
+    console.error(`Order registry failed for paid order: ${error.message}`);
+  }
 
   try {
     await notifyPaidOrder(job, session);

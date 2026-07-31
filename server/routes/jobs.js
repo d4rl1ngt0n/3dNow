@@ -13,8 +13,9 @@ import { slice, slicerAvailable } from '../services/slicer.js';
 import { DEFAULT_SLICE_SETTINGS, normalizeSliceSettings } from '../services/slice-settings.js';
 import { modelBounds } from '../services/geometry.js';
 import { sendAdminEmail, sendCustomerBusinessQuoteConfirmation, sendCustomerPrivateQuoteConfirmation } from '../services/mail.js';
-import { createCheckoutSession } from '../services/payments.js';
+import { createShopifyCheckout } from '../services/shopify-checkout.js';
 import { isEligibleStudentEmail } from '../services/student-email.js';
+import { registerBusinessQuote, registerCheckoutPending, registerPrivateQuote } from '../services/orders.js';
 
 const upload = multer({ dest: config.uploads, limits: { fileSize: config.uploadLimit } });
 const orderUpload = multer({ dest: config.submissions, limits: { fileSize: config.uploadLimit } });
@@ -381,6 +382,9 @@ jobsRouter.post('/:jobId/business-quote-request', async (req, res) => {
     if (contactMethod === 'email') {
       await sendCustomerBusinessQuoteConfirmation({ email: contact, filename: job.filename, totalFormatted: job.quote.totalFormatted });
     }
+    await registerBusinessQuote(job).catch(error => {
+      console.error(`Order registry failed for business quote: ${error.message}`);
+    });
     return res.status(201).json({ message: 'Business quote request received.' });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Could not send business quote request.' });
@@ -436,6 +440,9 @@ jobsRouter.post('/:jobId/private-quote-request', async (req, res) => {
     if (contactMethod === 'email') {
       await sendCustomerPrivateQuoteConfirmation({ email: contact, filename: job.filename });
     }
+    await registerPrivateQuote(job).catch(error => {
+      console.error(`Order registry failed for private quote: ${error.message}`);
+    });
     return res.status(201).json({ message: 'Quote request received.' });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Could not send quote request.' });
@@ -468,11 +475,14 @@ jobsRouter.post('/:jobId/checkout-session', orderUpload.single('studentId'), asy
   }
 
   try {
-    const session = await createCheckoutSession(job, details);
+    const checkout = await createShopifyCheckout(job, details);
     job.orderDetails = details;
     job.studentIdFile = req.file || null;
-    job.payment = { status: 'pending', sessionId: session.id, totalCents: session.amount_total };
-    return res.status(201).json({ sessionId: session.id, url: session.url });
+    job.payment = { status: 'pending', shopifyDraftOrderId: checkout.id, totalCents: checkout.totalCents };
+    await registerCheckoutPending(job).catch(error => {
+      console.error(`Order registry failed for checkout: ${error.message}`);
+    });
+    return res.status(201).json({ sessionId: checkout.id, url: checkout.url });
   } catch (error) {
     return res.status(400).json({ error: error.message || 'Could not start checkout.' });
   }
