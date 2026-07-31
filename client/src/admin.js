@@ -1,6 +1,7 @@
 import './admin.css';
 
 const TOKEN_KEY = '3dnow_admin_token';
+const SIDEBAR_KEY = '3dnow_admin_sidebar_collapsed';
 const NEEDS_ACTION = new Set(['new', 'awaiting-payment', 'quoted', 'reviewing']);
 
 const state = {
@@ -8,6 +9,7 @@ const state = {
   configured: true,
   view: 'inbox',
   inboxTab: 'needs-action',
+  sidebarCollapsed: localStorage.getItem(SIDEBAR_KEY) === '1',
   orders: [],
   labels: {},
   statuses: [],
@@ -167,25 +169,53 @@ async function loadSettings() {
   state.settings = result.settings;
 }
 
+function icon(name) {
+  const paths = {
+    inbox: '<path d="M4 6h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/><path d="M4 10h16"/><path d="M9 14h6"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.2"/><path d="M21 3v6h-6"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+    panel: '<path d="M4 6h16M4 12h10M4 18h16"/>',
+    panelOpen: '<path d="M4 6h16M4 12h16M4 18h16"/>'
+  };
+  return `<span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${paths[name] || ''}</svg></span>`;
+}
+
 function shell(content) {
+  const collapsed = state.sidebarCollapsed;
   return `
-    <div class="app-shell">
-      <aside class="sidebar">
-        <a class="sidebar-brand" href="/admin">
-          <img src="/brand-logo" alt="3DNow"/>
-          <span><strong>3DNow Ops</strong><span>Production desk</span></span>
-        </a>
-        <nav class="nav" aria-label="Ops navigation">
-          <button class="nav-btn ${state.view === 'inbox' ? 'active' : ''}" type="button" data-view="inbox">
-            Inbox <span class="nav-count">${needsActionCount()}</span>
+    <div class="app-shell ${collapsed ? 'is-collapsed' : ''}">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="sidebar-top">
+          <a class="sidebar-brand" href="/admin" title="3DNow Ops">
+            <img src="/brand-logo" alt="3DNow"/>
+            <span class="sidebar-brand-text"><strong>3DNow Ops</strong><span>Production desk</span></span>
+          </a>
+          <button class="collapse-btn" type="button" id="sidebar-toggle" title="${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}" aria-label="${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
+            ${icon(collapsed ? 'panelOpen' : 'panel')}
           </button>
-          <button class="nav-btn ${state.view === 'settings' ? 'active' : ''}" type="button" data-view="settings">
-            Settings
-          </button>
-        </nav>
+        </div>
+        <div>
+          <div class="sidebar-section-label">Workspace</div>
+          <nav class="sidebar-nav" aria-label="Ops navigation">
+            <button class="nav-btn ${state.view === 'inbox' ? 'active' : ''}" type="button" data-view="inbox" title="Inbox">
+              ${icon('inbox')}
+              <span class="nav-label">Inbox</span>
+              <span class="nav-count">${needsActionCount()}</span>
+            </button>
+            <button class="nav-btn ${state.view === 'settings' ? 'active' : ''}" type="button" data-view="settings" title="Settings">
+              ${icon('settings')}
+              <span class="nav-label">Settings</span>
+            </button>
+          </nav>
+        </div>
         <div class="sidebar-foot">
-          <button class="btn btn-sm" type="button" id="refresh-btn">Refresh</button>
-          <button class="btn btn-sm btn-danger" type="button" id="logout-btn">Sign out</button>
+          <button class="btn btn-sm" type="button" id="refresh-btn" title="Refresh">
+            ${icon('refresh')}<span class="btn-text">Refresh</span>
+          </button>
+          <button class="btn btn-sm btn-danger" type="button" id="logout-btn" title="Sign out">
+            ${icon('logout')}<span class="btn-text">Sign out</span>
+          </button>
         </div>
       </aside>
       <div class="workspace">
@@ -197,6 +227,12 @@ function shell(content) {
 }
 
 function bindShell() {
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    state.sidebarCollapsed = !state.sidebarCollapsed;
+    localStorage.setItem(SIDEBAR_KEY, state.sidebarCollapsed ? '1' : '0');
+    render();
+  });
+
   app.querySelectorAll('[data-view]').forEach(button => {
     button.addEventListener('click', async () => {
       state.view = button.getAttribute('data-view');
@@ -280,18 +316,17 @@ function renderInbox() {
     <div class="workspace-head">
       <div>
         <h1>Inbox</h1>
-        <p>Orders, quotes, and form requests from anfrage and the storefront.</p>
       </div>
       <div class="workspace-actions">
-        <button class="btn" type="button" id="refresh-head">Refresh</button>
+        <button class="btn btn-sm" type="button" id="refresh-head">${icon('refresh')}<span>Refresh</span></button>
       </div>
     </div>
     <div class="workspace-body">
-      <div class="stats">
-        <div class="stat"><strong>${needsActionCount()}</strong><span>Needs action</span></div>
-        <div class="stat"><strong>${stats.byStatus?.paid || 0}</strong><span>Paid</span></div>
-        <div class="stat"><strong>${stats.byStatus?.['in-production'] || 0}</strong><span>In production</span></div>
-        <div class="stat"><strong>${stats.total || 0}</strong><span>Total</span></div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Needs action</div><div class="metric-value">${needsActionCount()}</div></div>
+        <div class="metric"><div class="metric-label">Paid</div><div class="metric-value">${stats.byStatus?.paid || 0}</div></div>
+        <div class="metric"><div class="metric-label">In production</div><div class="metric-value">${stats.byStatus?.['in-production'] || 0}</div></div>
+        <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${stats.total || 0}</div></div>
       </div>
 
       <div class="layout">
@@ -316,35 +351,32 @@ function renderInbox() {
 
             <form class="filters" id="filter-form">
               <div class="field">
-                <label for="q">Search</label>
-                <input id="q" name="q" value="${escapeHtml(state.filters.q)}" placeholder="Name, email, file, job id"/>
+                <input id="q" name="q" value="${escapeHtml(state.filters.q)}" placeholder="Search name, email, file, job id" aria-label="Search"/>
               </div>
               <div class="field">
-                <label for="type">Type</label>
-                <select id="type" name="type">
+                <select id="type" name="type" aria-label="Type">
                   <option value="">All types</option>
                   ${['student-order', 'business-quote', 'private-quote', 'contact', 'idea', 'legacy-order'].map(type => `
                     <option value="${type}" ${state.filters.type === type ? 'selected' : ''}>${typeLabel(type)}</option>
                   `).join('')}
                 </select>
               </div>
-              <div class="field">
-                <label>&nbsp;</label>
-                <button class="btn" type="submit">Apply</button>
-              </div>
+              <button class="btn" type="submit">Filter</button>
             </form>
 
             <div class="order-list">
               ${list.length ? list.map(item => `
-                <button class="order-card ${item.id === state.selectedId ? 'active' : ''}" type="button" data-order-id="${item.id}">
-                  <div class="order-card-top">
-                    <strong>${escapeHtml(typeLabel(item.type))}</strong>
-                    ${statusBadge(item.status)}
+                <button class="order-row ${item.id === state.selectedId ? 'active' : ''}" type="button" data-order-id="${item.id}">
+                  <div class="order-row-main">
+                    <div class="order-row-title">${escapeHtml(item.summary || item.filename || typeLabel(item.type))}</div>
+                    <div class="order-row-sub">${escapeHtml(typeLabel(item.type))} · ${escapeHtml(item.customer?.email || item.customer?.phone || 'No contact')}</div>
                   </div>
-                  <div class="summary">${escapeHtml(item.summary || item.filename || 'Untitled request')}</div>
-                  <div class="meta">${escapeHtml(item.customer?.email || item.customer?.phone || 'No contact')} · ${escapeHtml(formatDate(item.createdAt))}</div>
+                  <div class="order-row-meta">
+                    ${statusBadge(item.status)}
+                    <span class="order-row-time">${escapeHtml(formatDate(item.createdAt))}</span>
+                  </div>
                 </button>
-              `).join('') : '<div class="empty">No requests in this view.</div>'}
+              `).join('') : '<div class="empty"><strong>No requests here</strong>Try another filter or tab.</div>'}
             </div>
           </div>
         </section>
@@ -353,11 +385,11 @@ function renderInbox() {
           <div class="panel-head">
             <div>
               <h2>Details</h2>
-              <p>${order ? 'Update status, files, and customer updates.' : 'Select a request from the queue.'}</p>
+              <p>${order ? 'Status, files, shipping, customer updates' : 'Select a request'}</p>
             </div>
           </div>
           <div class="panel-body">
-            ${order ? renderDetail(order) : '<div class="empty">Nothing selected.</div>'}
+            ${order ? renderDetail(order) : '<div class="empty"><strong>Nothing selected</strong>Pick an item from the queue.</div>'}
           </div>
         </aside>
       </div>
@@ -562,43 +594,46 @@ function renderDetail(order) {
   const shopifyUrl = shopifyAdminOrderUrl(payment);
   return `
     <div class="detail-grid">
-      <div>
-        <div class="order-card-top" style="margin-bottom:10px">
-          <strong>${escapeHtml(typeLabel(order.type))}</strong>
-          ${statusBadge(order.status)}
+      <div class="detail-hero">
+        <div>
+          <h3>${escapeHtml(typeLabel(order.type))}</h3>
+          <div class="lede">${escapeHtml(order.summary || order.filename || 'Untitled request')}</div>
         </div>
-        <dl class="kv">
-          <dt>Created</dt><dd>${escapeHtml(formatDate(order.createdAt))}</dd>
-          <dt>Updated</dt><dd>${escapeHtml(formatDate(order.updatedAt))}</dd>
-          <dt>File</dt><dd>${escapeHtml(order.filename || 'n/a')}</dd>
-          <dt>Job ID</dt><dd class="mono">${escapeHtml(order.jobId || 'n/a')}</dd>
-          <dt>Customer</dt><dd>${escapeHtml(order.customer?.name || 'n/a')}</dd>
-          <dt>Email</dt><dd>${escapeHtml(order.customer?.email || 'n/a')}</dd>
-          <dt>Phone</dt><dd>${escapeHtml(order.customer?.phone || 'n/a')}</dd>
-          <dt>Payment</dt><dd>${escapeHtml(payment.status || 'n/a')}${payment.totalCents != null ? ` · ${formatMoney(payment.totalCents)}` : ''}</dd>
-          <dt>Shopify</dt><dd>${payment.shopifyOrderName
-            ? (shopifyUrl
-              ? `<a href="${escapeHtml(shopifyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(payment.shopifyOrderName)}</a>`
-              : escapeHtml(payment.shopifyOrderName))
-            : escapeHtml(payment.shopifyDraftOrderId ? `Draft ${payment.shopifyDraftOrderId}` : 'n/a')}</dd>
-          <dt>Shipping</dt><dd>${escapeHtml(formatShipping(payment.shippingAddress))}</dd>
-          <dt>Package</dt><dd>${escapeHtml(details.packageName || order.quote?.package?.name || order.quote?.totalFormatted || 'n/a')}</dd>
-          <dt>Material</dt><dd>${escapeHtml(details.material || 'n/a')}</dd>
-          <dt>Quantity</dt><dd>${escapeHtml(details.quantity ?? 'n/a')}</dd>
-        </dl>
-        ${order.type === 'student-order' ? `
-          <div class="actions" style="margin-top:12px">
-            <button class="btn" type="button" data-packing-label="${order.id}">Print packing label</button>
-          </div>
-        ` : ''}
+        ${statusBadge(order.status)}
       </div>
+
+      <dl class="kv">
+        <dt>Created</dt><dd>${escapeHtml(formatDate(order.createdAt))}</dd>
+        <dt>Updated</dt><dd>${escapeHtml(formatDate(order.updatedAt))}</dd>
+        <dt>File</dt><dd>${escapeHtml(order.filename || 'n/a')}</dd>
+        <dt>Job ID</dt><dd class="mono">${escapeHtml(order.jobId || 'n/a')}</dd>
+        <dt>Customer</dt><dd>${escapeHtml(order.customer?.name || 'n/a')}</dd>
+        <dt>Email</dt><dd>${escapeHtml(order.customer?.email || 'n/a')}</dd>
+        <dt>Phone</dt><dd>${escapeHtml(order.customer?.phone || 'n/a')}</dd>
+        <dt>Payment</dt><dd>${escapeHtml(payment.status || 'n/a')}${payment.totalCents != null ? ` · ${formatMoney(payment.totalCents)}` : ''}</dd>
+        <dt>Shopify</dt><dd>${payment.shopifyOrderName
+          ? (shopifyUrl
+            ? `<a href="${escapeHtml(shopifyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(payment.shopifyOrderName)}</a>`
+            : escapeHtml(payment.shopifyOrderName))
+          : escapeHtml(payment.shopifyDraftOrderId ? `Draft ${payment.shopifyDraftOrderId}` : 'n/a')}</dd>
+        <dt>Shipping</dt><dd>${escapeHtml(formatShipping(payment.shippingAddress))}</dd>
+        <dt>Package</dt><dd>${escapeHtml(details.packageName || order.quote?.package?.name || order.quote?.totalFormatted || 'n/a')}</dd>
+        <dt>Material</dt><dd>${escapeHtml(details.material || 'n/a')}</dd>
+        <dt>Quantity</dt><dd>${escapeHtml(details.quantity ?? 'n/a')}</dd>
+      </dl>
+
+      ${order.type === 'student-order' ? `
+        <div class="actions">
+          <button class="btn" type="button" data-packing-label="${order.id}">Print packing label</button>
+        </div>
+      ` : ''}
 
       ${order.files?.length ? `
         <div>
           <div class="section-title">Files</div>
           <div class="actions">
             ${order.files.map(file => `
-              <button class="btn" type="button" data-download-order="${order.id}" data-download-index="${file.index}" ${file.available ? '' : 'disabled'}>
+              <button class="btn btn-sm" type="button" data-download-order="${order.id}" data-download-index="${file.index}" ${file.available ? '' : 'disabled'}>
                 ${escapeHtml(file.originalname || `File ${file.index + 1}`)}
               </button>
             `).join('')}
@@ -609,9 +644,11 @@ function renderDetail(order) {
       ${details.message || details.description || details.configuration ? `
         <div>
           <div class="section-title">Message</div>
-          <p style="white-space:pre-wrap;font-size:13px;color:var(--muted)">${escapeHtml(details.message || details.description || details.configuration)}</p>
+          <p style="white-space:pre-wrap;font-size:13px;color:var(--text-secondary)">${escapeHtml(details.message || details.description || details.configuration)}</p>
         </div>
       ` : ''}
+
+      <div class="divider"></div>
 
       <form id="status-form" class="detail-grid">
         <div class="section-title">Production</div>
@@ -625,7 +662,7 @@ function renderDetail(order) {
         </div>
         <div class="field">
           <label for="statusNote">Internal note</label>
-          <input id="statusNote" name="statusNote" placeholder="Optional note for the status history"/>
+          <input id="statusNote" name="statusNote" placeholder="Optional note for history"/>
         </div>
         <div class="field">
           <label for="notes">Ops notes</label>
@@ -635,6 +672,8 @@ function renderDetail(order) {
           <button class="btn btn-primary" type="submit">Save status</button>
         </div>
       </form>
+
+      <div class="divider"></div>
 
       <form id="notify-form" class="detail-grid">
         <div class="section-title">Notify customer</div>
@@ -652,10 +691,10 @@ function renderDetail(order) {
         </div>
         <div class="field">
           <label for="notify-message">Message (optional)</label>
-          <textarea id="notify-message" name="message" placeholder="Leave blank to use the default status email"></textarea>
+          <textarea id="notify-message" name="message" placeholder="Leave blank for the default status email"></textarea>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" type="submit">Send update email</button>
+          <button class="btn btn-primary" type="submit">Send update</button>
         </div>
       </form>
 
@@ -672,7 +711,7 @@ function renderDetail(order) {
       </div>
 
       <div>
-        <div class="section-title">Notifications sent</div>
+        <div class="section-title">Notifications</div>
         <div class="history">
           ${(order.notifications || []).slice().reverse().map(entry => `
             <div class="history-item">
@@ -709,13 +748,20 @@ function renderSettings() {
     <div class="workspace-head">
       <div>
         <h1>Settings</h1>
-        <p>Handover configuration for email, Shopify, and ops access. Secrets stay masked after save.</p>
       </div>
     </div>
     <div class="workspace-body">
       <div class="settings-grid">
-        <section class="panel settings-card">
-          <div class="panel-head"><div><h2>Setup checklist</h2><p>What must be ready before you hand over.</p></div></div>
+        <nav class="settings-nav" aria-label="Settings sections">
+          <a href="#setup">Setup checklist</a>
+          <a href="#general">General</a>
+          <a href="#email">Email (SMTP)</a>
+          <a href="#shopify">Shopify</a>
+          <a href="#stripe">Stripe</a>
+        </nav>
+        <div class="settings-stack">
+        <section class="panel settings-card" id="setup">
+          <div class="panel-head"><div><h2>Setup checklist</h2><p>Ready for handover</p></div></div>
           <div class="panel-body">
             <div class="check-list">
               ${checkItem('Admin password', s.checks?.adminPassword)}
@@ -737,7 +783,7 @@ function renderSettings() {
         </section>
 
         <form class="panel settings-card" id="general-form">
-          <div class="panel-head"><div><h2>General</h2><p>Public site URL, alert inbox, and admin access.</p></div></div>
+          <div class="panel-head" id="general"><div><h2>General</h2><p>URL, alerts, admin access</p></div></div>
           <div class="panel-body">
             <div class="field">
               <label for="publicUrl">Public URL</label>
@@ -758,7 +804,7 @@ function renderSettings() {
         </form>
 
         <form class="panel settings-card" id="smtp-form">
-          <div class="panel-head"><div><h2>Email (SMTP)</h2><p>Customer confirmations and ops alerts.</p></div></div>
+          <div class="panel-head" id="email"><div><h2>Email (SMTP)</h2><p>Customer and ops mail</p></div></div>
           <div class="panel-body">
             <div class="field-row">
               <div class="field">
@@ -804,7 +850,7 @@ function renderSettings() {
         </form>
 
         <form class="panel settings-card" id="shopify-form">
-          <div class="panel-head"><div><h2>Shopify</h2><p>Draft order checkout and paid-order webhooks.</p></div></div>
+          <div class="panel-head" id="shopify"><div><h2>Shopify</h2><p>Checkout and webhooks</p></div></div>
           <div class="panel-body">
             <div class="field">
               <label for="shopifyShop">Shop domain</label>
@@ -831,7 +877,7 @@ function renderSettings() {
         </form>
 
         <form class="panel settings-card" id="stripe-form">
-          <div class="panel-head"><div><h2>Stripe (optional / legacy)</h2><p>Only needed if you still use Stripe webhooks.</p></div></div>
+          <div class="panel-head" id="stripe"><div><h2>Stripe (optional)</h2><p>Legacy only</p></div></div>
           <div class="panel-body">
             <div class="field">
               <label for="stripeSecret">Secret key</label>
@@ -844,6 +890,7 @@ function renderSettings() {
             <div class="actions"><button class="btn btn-primary" type="submit">Save Stripe</button></div>
           </div>
         </form>
+        </div>
       </div>
     </div>
   `);
