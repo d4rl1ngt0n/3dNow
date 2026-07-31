@@ -50,7 +50,36 @@ function enqueueWrite() {
   return writeQueue;
 }
 
-function publicOrder(order) {
+function inferFileKind(file) {
+  const name = String(file.originalname || file.filename || '').toLowerCase();
+  const mime = String(file.mimetype || '').toLowerCase();
+  if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/i.test(name)) return 'image';
+  if (mime === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+  if (/\.(stl|obj|3mf)$/i.test(name)) return 'mesh';
+  return 'file';
+}
+
+async function publicOrder(order) {
+  const files = await Promise.all((order.files || []).map(async (file, index) => {
+    let available = false;
+    if (file.path) {
+      try {
+        await fs.access(file.path);
+        available = true;
+      } catch {
+        available = false;
+      }
+    }
+    return {
+      index,
+      originalname: file.originalname || file.filename || `file-${index + 1}`,
+      mimetype: file.mimetype || null,
+      size: file.size || null,
+      available,
+      kind: inferFileKind(file)
+    };
+  }));
+
   return {
     id: order.id,
     createdAt: order.createdAt,
@@ -66,13 +95,7 @@ function publicOrder(order) {
     quote: order.quote || null,
     details: order.details || {},
     notes: order.notes || '',
-    files: (order.files || []).map((file, index) => ({
-      index,
-      originalname: file.originalname || file.filename || `file-${index + 1}`,
-      mimetype: file.mimetype || null,
-      size: file.size || null,
-      available: Boolean(file.path)
-    })),
+    files,
     statusHistory: order.statusHistory || [],
     notifications: order.notifications || []
   };
@@ -102,11 +125,11 @@ export const orderStore = {
       ].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(needle);
     });
-    return filtered
+    const page = filtered
       .slice()
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-      .slice(0, Math.min(Number(limit) || 100, 500))
-      .map(publicOrder);
+      .slice(0, Math.min(Number(limit) || 100, 500));
+    return Promise.all(page.map(publicOrder));
   },
 
   async get(id) {
@@ -161,7 +184,7 @@ export const orderStore = {
     };
     orders.unshift(order);
     await enqueueWrite();
-    return publicOrder(order);
+    return await publicOrder(order);
   },
 
   async update(id, values = {}) {
@@ -207,7 +230,7 @@ export const orderStore = {
 
     order.updatedAt = now;
     await enqueueWrite();
-    return publicOrder(order);
+    return await publicOrder(order);
   },
 
   async recordNotification(id, entry) {
@@ -225,7 +248,7 @@ export const orderStore = {
     });
     order.updatedAt = new Date().toISOString();
     await enqueueWrite();
-    return publicOrder(order);
+    return await publicOrder(order);
   },
 
   async stats() {

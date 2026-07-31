@@ -144,6 +144,29 @@ adminRouter.post('/orders/:id/notify', async (req, res) => {
   }
 });
 
+function mimeFromName(name) {
+  const ext = path.extname(String(name || '')).toLowerCase();
+  return ({
+    '.stl': 'model/stl',
+    '.obj': 'model/obj',
+    '.3mf': 'model/3mf',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.pdf': 'application/pdf',
+    '.gcode': 'text/plain',
+    '.gco': 'text/plain',
+    '.nc': 'text/plain'
+  })[ext] || null;
+}
+
+function safeDownloadName(name) {
+  return String(name || 'file').replace(/[\r\n"]/g, '_');
+}
+
 adminRouter.get('/orders/:id/files/:index', async (req, res) => {
   const raw = await orderStore.getRaw(req.params.id);
   if (!raw) return res.status(404).json({ error: 'Order not found.' });
@@ -151,14 +174,23 @@ adminRouter.get('/orders/:id/files/:index', async (req, res) => {
   const file = raw.files?.[index];
   if (!file?.path) return res.status(404).json({ error: 'File not found.' });
 
+  const absolute = path.resolve(file.path);
   try {
-    await fs.access(file.path);
+    await fs.access(absolute);
   } catch {
     return res.status(404).json({ error: 'File is no longer on disk.' });
   }
 
-  const downloadName = file.originalname || file.filename || path.basename(file.path);
-  res.download(file.path, downloadName);
+  const downloadName = safeDownloadName(file.originalname || file.filename || path.basename(absolute));
+  const contentType = file.mimetype || mimeFromName(downloadName) || 'application/octet-stream';
+  const inline = req.query.inline === '1' || req.query.disposition === 'inline';
+
+  res.setHeader('Content-Type', contentType);
+  res.setHeader(
+    'Content-Disposition',
+    `${inline ? 'inline' : 'attachment'}; filename="${downloadName}"`
+  );
+  return res.sendFile(absolute);
 });
 
 adminRouter.get('/settings', async (_req, res) => {

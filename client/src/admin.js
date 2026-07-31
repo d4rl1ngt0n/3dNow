@@ -1,4 +1,9 @@
 import './admin.css';
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
+import { Preview, createFilamentMaterial, preparePrintPreview } from './preview.js';
 
 const TOKEN_KEY = '3dnow_admin_token';
 const NEEDS_ACTION = new Set(['new', 'awaiting-payment', 'quoted', 'reviewing']);
@@ -22,6 +27,10 @@ const state = {
 };
 
 const app = document.getElementById('app');
+
+let fileViewerEl = null;
+let fileViewerUrl = null;
+let fileViewerPreview = null;
 
 function authHeaders(extra = {}) {
   const headers = { ...extra };
@@ -79,6 +88,199 @@ function formatDate(value) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+function formatBytes(bytes) {
+  const size = Number(bytes);
+  if (!Number.isFinite(size) || size < 0) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileKindLabel(kind) {
+  return ({ image: 'Image', pdf: 'PDF', mesh: '3D model', file: 'File' })[kind] || 'File';
+}
+
+function inferClientFileKind(file) {
+  if (file?.kind) return file.kind;
+  const name = String(file?.originalname || '').toLowerCase();
+  const mime = String(file?.mimetype || '').toLowerCase();
+  if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(name)) return 'image';
+  if (mime === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+  if (/\.(stl|obj|3mf)$/i.test(name)) return 'mesh';
+  return 'file';
+}
+
+async function fetchOrderFile(orderId, index) {
+  const response = await fetch(`/api/admin/orders/${orderId}/files/${index}?inline=1`, {
+    headers: authHeaders()
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || 'Could not load file.');
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] || `file-${index}`;
+  return { blob, filename, contentType: response.headers.get('content-type') || blob.type };
+}
+
+function closeFileViewer() {
+  if (fileViewerPreview) {
+    fileViewerPreview.dispose();
+    fileViewerPreview = null;
+  }
+  if (fileViewerUrl) {
+    URL.revokeObjectURL(fileViewerUrl);
+    fileViewerUrl = null;
+  }
+  fileViewerEl?.remove();
+  fileViewerEl = null;
+}
+
+async function loadMeshForViewer(blob, filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  const color = '#dbe4ea';
+  if (ext === 'stl') {
+    const geometry = new STLLoader().parse(await blob.arrayBuffer());
+    const mesh = new THREE.Mesh(geometry, createFilamentMaterial(color));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return preparePrintPreview(mesh, { layFlat: true });
+  }
+  if (ext === 'obj') {
+    const url = URL.createObjectURL(blob);
+    try {
+      const object = await new OBJLoader().loadAsync(url);
+      object.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          child.material = createFilamentMaterial(color);
+        }
+      });
+      return preparePrintPreview(object, { layFlat: true });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  if (ext === '3mf') {
+    const buffer = await blob.arrayBuffer();
+    let mesh = await new ThreeMFLoader().parse(buffer.slice(0));
+    if (!mesh?.getObjectByProperty?.('isMesh', true) && !mesh?.isMesh) {
+      throw new Error('This 3MF has no previewable mesh.');
+    }
+    mesh.traverse?.(child => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.material = createFilamentMaterial(color);
+      }
+    });
+    return preparePrintPreview(mesh, { layFlat: false });
+  }
+  throw new Error('Preview is only available for STL, OBJ, and 3MF.');
+}
+
+async function openFileViewer(orderId, index, fileMeta = {}) {
+  closeFileViewer();
+  const name = fileMeta.originalname || `File ${Number(index) + 1}`;
+  const kind = inferClientFileKind(fileMeta);
+
+  fileViewerEl = document.createElement('div');
+  fileViewerEl.className = 'file-viewer';
+  fileViewerEl.setAttribute('role', 'dialog');
+  fileViewerEl.setAttribute('aria-modal', 'true');
+  fileViewerEl.setAttribute('aria-label', `View ${name}`);
+  fileViewerEl.innerHTML = `
+    <div class="file-viewer-backdrop" data-viewer-close></div>
+    <div class="file-viewer-panel">
+      <div class="file-viewer-head">
+        <div>
+          <h3>${escapeHtml(name)}</h3>
+          <p>${escapeHtml(fileKindLabel(kind))}${fileMeta.size ? ` · ${escapeHtml(formatBytes(fileMeta.size))}` : ''}</p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-sm" type="button" data-viewer-download>Download</button>
+          <button class="icon-btn" type="button" data-viewer-close title="Close">${icon('close')}</button>
+        </div>
+      </div>
+      <div class="file-viewer-body" data-viewer-body>
+        <div class="file-viewer-status">Loading file…</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(fileViewerEl);
+
+  const body = fileViewerEl.querySelector('[data-viewer-body]');
+  const close = () => closeFileViewer();
+  fileViewerEl.querySelectorAll('[data-viewer-close]').forEach(el => el.addEventListener('click', close));
+  fileViewerEl.querySelector('[data-viewer-download]')?.addEventListener('click', async () => {
+    try {
+      await downloadOrderFile(orderId, index);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+  const onKey = event => {
+    if (event.key === 'Escape') {
+      close();
+      window.removeEventListener('keydown', onKey);
+    }
+  };
+  window.addEventListener('keydown', onKey);
+
+  try {
+    const { blob, filename } = await fetchOrderFile(orderId, index);
+    fileViewerUrl = URL.createObjectURL(blob);
+
+    if (kind === 'image') {
+      body.innerHTML = `<img class="file-viewer-image" src="${fileViewerUrl}" alt="${escapeHtml(filename)}"/>`;
+      return;
+    }
+    if (kind === 'pdf') {
+      body.innerHTML = `<iframe class="file-viewer-frame" src="${fileViewerUrl}" title="${escapeHtml(filename)}"></iframe>`;
+      return;
+    }
+    if (kind === 'mesh') {
+      body.innerHTML = `<div class="file-viewer-canvas" data-mesh-host></div>`;
+      const host = body.querySelector('[data-mesh-host]');
+      fileViewerPreview = new Preview(host);
+      const object = await loadMeshForViewer(blob, filename);
+      fileViewerPreview.set(object, { showBed: true });
+      fileViewerPreview.setColor('#dbe4ea');
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="file-viewer-status">
+        <strong>No inline preview</strong>
+        <span>This file type opens via download.</span>
+        <button class="btn btn-primary btn-sm" type="button" data-viewer-fallback-download>Download file</button>
+      </div>
+    `;
+    body.querySelector('[data-viewer-fallback-download]')?.addEventListener('click', async () => {
+      try {
+        await downloadOrderFile(orderId, index);
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+  } catch (error) {
+    body.innerHTML = `<div class="file-viewer-status error"><strong>Could not open file</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+
+async function downloadOrderFile(orderId, index) {
+  const { blob, filename } = await fetchOrderFile(orderId, index);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function typeLabel(type) {
@@ -485,12 +687,27 @@ function renderDrawer(order) {
         ${order.files?.length ? `
           <div>
             <div class="section-label">Files</div>
-            <div class="actions" style="margin-top:8px">
-              ${order.files.map(file => `
-                <button class="btn btn-sm" type="button" data-download-order="${order.id}" data-download-index="${file.index}" ${file.available ? '' : 'disabled'}>
-                  ${escapeHtml(file.originalname || `File ${file.index + 1}`)}
-                </button>
-              `).join('')}
+            <div class="file-list">
+              ${order.files.map(file => {
+                const kind = inferClientFileKind(file);
+                const meta = [
+                  fileKindLabel(kind),
+                  file.size ? formatBytes(file.size) : null,
+                  file.available ? null : 'Missing on disk'
+                ].filter(Boolean).join(' · ');
+                return `
+                  <div class="file-row">
+                    <div class="file-meta">
+                      <div class="file-name">${escapeHtml(file.originalname || `File ${file.index + 1}`)}</div>
+                      <div class="cell-sub">${escapeHtml(meta)}</div>
+                    </div>
+                    <div class="actions">
+                      <button class="btn btn-sm" type="button" data-view-order="${order.id}" data-view-index="${file.index}" data-view-name="${escapeHtml(file.originalname || '')}" data-view-kind="${escapeHtml(kind)}" data-view-size="${file.size || ''}" ${file.available ? '' : 'disabled'}>View</button>
+                      <button class="btn btn-sm" type="button" data-download-order="${order.id}" data-download-index="${file.index}" ${file.available ? '' : 'disabled'}>Download</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
         ` : ''}
@@ -589,26 +806,28 @@ function bindDrawerEvents(order) {
 
   document.getElementById('packing-btn')?.addEventListener('click', () => openPackingLabel(order));
 
+  app.querySelectorAll('[data-view-order]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const orderId = button.getAttribute('data-view-order');
+      const index = button.getAttribute('data-view-index');
+      try {
+        await openFileViewer(orderId, index, {
+          originalname: button.getAttribute('data-view-name') || undefined,
+          kind: button.getAttribute('data-view-kind') || undefined,
+          size: Number(button.getAttribute('data-view-size')) || null
+        });
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+  });
+
   app.querySelectorAll('[data-download-order]').forEach(button => {
     button.addEventListener('click', async () => {
       const orderId = button.getAttribute('data-download-order');
       const index = button.getAttribute('data-download-index');
       try {
-        const response = await fetch(`/api/admin/orders/${orderId}/files/${index}`, { headers: authHeaders() });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || 'Download failed.');
-        }
-        const blob = await response.blob();
-        const disposition = response.headers.get('content-disposition') || '';
-        const match = disposition.match(/filename="?([^"]+)"?/i);
-        const filename = match?.[1] || `file-${index}`;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.click();
-        URL.revokeObjectURL(url);
+        await downloadOrderFile(orderId, index);
       } catch (error) {
         showToast(error.message);
       }
