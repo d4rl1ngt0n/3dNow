@@ -921,13 +921,13 @@ $('#file').onchange = async event => {
   renderUploadPreview(file);
   renderOrderSummary();
 
+  let previewError = null;
   try {
     status('Loading 3D preview…');
     await previewFile(file);
   } catch (error) {
-    status(error.message, 'manual-review');
+    previewError = error;
     clearPreviewProgress();
-    return;
   }
 
   try {
@@ -943,10 +943,13 @@ $('#file').onchange = async event => {
     if (state.material === 'Not sure') {
       await recordMaterialChoice(created.jobId, 'Not sure');
     }
+    if (previewError) {
+      status(`Preview unavailable (${previewError.message}). Still reading sliced metadata…`, 'manual-review');
+    }
     poll(created.jobId);
   } catch (error) {
     clearPreviewProgress();
-    status(error.message || 'Upload failed.', 'error');
+    status(error.message || previewError?.message || 'Upload failed.', 'error');
   }
 };
 
