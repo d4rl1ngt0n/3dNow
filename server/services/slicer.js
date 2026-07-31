@@ -48,7 +48,7 @@ function spawnSlicer(args, { useXvfb }) {
     XAUTHORITY: process.env.XAUTHORITY || '/tmp/.Xauthority'
   };
   if (useXvfb) {
-    return spawn('xvfb-run', ['-a', '-s', '-ac -screen 0 1024x768x24', config.slicerPath, ...args], {
+    return spawn('xvfb-run', ['-a', config.slicerPath, ...args], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...env, DISPLAY: process.env.DISPLAY || ':99' }
     });
@@ -59,16 +59,42 @@ function spawnSlicer(args, { useXvfb }) {
   });
 }
 
+function iniLines(values) {
+  return Object.entries(values)
+    .filter(([, value]) => value != null && value !== '')
+    .map(([key, value]) => `${key} = ${value}`)
+    .join('\n');
+}
+
+async function writeOverrideIni(filePath, settings) {
+  const speeds = speedValues(settings.speedPreset);
+  const body = iniLines({
+    nozzle_diameter: settings.nozzleDiameterMm,
+    layer_height: settings.layerHeightMm,
+    first_layer_height: settings.layerHeightMm,
+    fill_density: `${settings.infill}%`,
+    perimeters: settings.walls,
+    external_perimeter_speed: speeds.externalPerimeterSpeed,
+    perimeter_speed: speeds.perimeterSpeed,
+    infill_speed: speeds.infillSpeed,
+    solid_infill_speed: speeds.infillSpeed,
+    top_solid_infill_speed: speeds.topSolidInfillSpeed,
+    travel_speed: speeds.travelSpeed,
+    first_layer_speed: speeds.firstLayerSpeed
+  });
+  await fs.writeFile(filePath, `${body}\n`, 'utf8');
+}
+
 function runOnce(args, output, settings, useXvfb) {
   return new Promise((resolve, reject) => {
     const child = spawnSlicer(args, { useXvfb });
     let stderr = '';
     let stdout = '';
     child.stderr?.on('data', chunk => {
-      stderr = `${stderr}${chunk}`.slice(-6000);
+      stderr = `${stderr}${chunk}`.slice(-8000);
     });
     child.stdout?.on('data', chunk => {
-      stdout = `${stdout}${chunk}`.slice(-2000);
+      stdout = `${stdout}${chunk}`.slice(-4000);
     });
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
@@ -90,7 +116,15 @@ function runOnce(args, output, settings, useXvfb) {
         resolve(settings);
         return;
       }
-      const error = new Error(detail.split('\n').filter(Boolean).slice(-4).join(' ') || `Slicing failed (exit ${code})`);
+      // Keep the message short for the UI; full detail stays on the error object.
+      const compact = detail
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .filter(line => !/highest priority|config files loaded|run --help/i.test(line))
+        .slice(-6)
+        .join(' ');
+      const error = new Error(compact || `Slicing failed (exit ${code})`);
       error.detail = detail;
       error.exitCode = code;
       reject(error);
@@ -105,26 +139,25 @@ export function slice(input, output, material, profileInput = DEFAULT_SLICE_SETT
     if (error || !settings) throw new Error(error || 'Invalid slice settings');
     if (!existsSync(input)) throw new Error('Upload file is missing for slicing');
 
+    const printerIni = path.join(config.profiles, 'printer', 'p1s.ini');
+    const printIni = path.join(config.profiles, 'print', '0.30.ini');
+    const filamentIni = path.join(config.profiles, 'filament', `${material}.ini`);
+    for (const file of [printerIni, printIni, filamentIni]) {
+      if (!existsSync(file)) throw new Error(`Missing slicer profile: ${path.basename(file)}`);
+    }
+
     await fs.mkdir(path.dirname(output), { recursive: true });
-    const speeds = speedValues(settings.speedPreset);
+    const overrideIni = path.join(path.dirname(output), `${path.basename(output, '.gcode')}.overrides.ini`);
+    await writeOverrideIni(overrideIni, settings);
+
+    // Keep CLI minimal. Debian/bookworm PrusaSlicer rejects many inline option flags
+    // and prints --help text instead of slicing.
     const args = [
-      '--load', path.join(config.profiles, 'printer', 'p1s.ini'),
-      '--load', path.join(config.profiles, 'print', '0.30.ini'),
-      '--load', path.join(config.profiles, 'filament', `${material}.ini`),
-      '--nozzle-diameter', String(settings.nozzleDiameterMm),
-      '--layer-height', String(settings.layerHeightMm),
-      '--first-layer-height', String(settings.layerHeightMm),
-      '--fill-density', `${settings.infill}%`,
-      '--perimeters', String(settings.walls),
-      '--external-perimeter-speed', String(speeds.externalPerimeterSpeed),
-      '--perimeter-speed', String(speeds.perimeterSpeed),
-      '--infill-speed', String(speeds.infillSpeed),
-      '--solid-infill-speed', String(speeds.infillSpeed),
-      '--top-solid-infill-speed', String(speeds.topSolidInfillSpeed),
-      '--travel-speed', String(speeds.travelSpeed),
-      '--first-layer-speed', String(speeds.firstLayerSpeed),
-      '--threads', String(config.sliceThreads),
-      '-g',
+      '--load', printerIni,
+      '--load', printIni,
+      '--load', filamentIni,
+      '--load', overrideIni,
+      '--export-gcode',
       '-o', output,
       input
     ];
@@ -135,8 +168,25 @@ export function slice(input, output, material, profileInput = DEFAULT_SLICE_SETT
     } catch (firstError) {
       const detail = String(firstError.detail || firstError.message || '');
       const shouldRetryWithoutXvfb = preferXvfb && /xauth|xvfb-run|DISPLAY|cannot open display/i.test(detail);
-      if (!shouldRetryWithoutXvfb) throw firstError;
-      return runOnce(args, output, settings, false);
+      if (shouldRetryWithoutXvfb) {
+        return runOnce(args, output, settings, false);
+      }
+      // Older builds only accept -g instead of --export-gcode.
+      if (/unknown option|unrecognised option|export-gcode/i.test(detail)) {
+        const legacyArgs = [
+          '--load', printerIni,
+          '--load', printIni,
+          '--load', filamentIni,
+          '--load', overrideIni,
+          '-g',
+          '-o', output,
+          input
+        ];
+        return runOnce(legacyArgs, output, settings, preferXvfb);
+      }
+      throw firstError;
+    } finally {
+      await fs.unlink(overrideIni).catch(() => {});
     }
   };
 

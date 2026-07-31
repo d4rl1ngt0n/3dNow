@@ -220,8 +220,11 @@ async function process(job) {
   } catch (error) {
     job.status = error.message.includes('unavailable') || error.message.includes('build volume') ? 'manual-review' : 'error';
     job.sliceStatus = 'error';
-    job.error = error.message;
-    job.warnings.push(error.message);
+    const message = String(error.message || 'Slicing failed').slice(0, 300);
+    job.error = message;
+    job.warnings.push(message);
+    console.error('[slice]', job.id, job.filename, message);
+    if (error.detail) console.error('[slice:detail]', String(error.detail).slice(-1500));
   }
 }
 
