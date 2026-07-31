@@ -21,6 +21,20 @@ function cleanMeta(value) {
   return text || null;
 }
 
+function numberList(value) {
+  if (value == null) return [];
+  return String(value)
+    .split(/[,;|]/)
+    .map(part => n(part.replace(/[^\d.eE+-]/g, '')))
+    .filter(value => value != null && value >= 0);
+}
+
+function sumNumberList(value) {
+  const parts = numberList(value);
+  if (!parts.length) return null;
+  return parts.reduce((sum, part) => sum + part, 0);
+}
+
 function commentValue(line, keys) {
   const pattern = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   const match = line.match(new RegExp(`^;\\s*(?:${pattern})\\s*[:=]\\s*(.+)$`, 'i'));
@@ -32,39 +46,54 @@ function numberAfter(line, pattern) {
   return match ? n(match[1]) : null;
 }
 
-function extractHeaderBlock(text) {
-  const match = text.match(/;\s*HEADER_BLOCK_START([\s\S]*?);\s*HEADER_BLOCK_END/i);
-  return match ? match[1] : null;
-}
-
-function scanCommentLines(text, { stopAtConfig = true, maxLines = 2500 } = {}) {
-  const lines = [];
-  for (const raw of text.split(/\r?\n/)) {
-    if (lines.length >= maxLines) break;
-    const trimmed = raw.trim();
-    if (stopAtConfig && /^;\s*CONFIG_BLOCK_START/i.test(trimmed)) break;
-    if (trimmed.startsWith(';')) lines.push(trimmed);
+function weightFromLine(line) {
+  const patterns = [
+    /total\s+filament\s+weight\s*(?:\[\s*g\s*\])?\s*[:=]\s*([0-9.,;| ]+)/i,
+    /(?:^|;)\s*filament\s+weight\s*(?:\[\s*g\s*\])?\s*[:=]\s*([0-9.,;| ]+)/i,
+    /(?:total\s+)?filament(?:\s+used)?\s*\[\s*g\s*\]\s*[:=]\s*([0-9.,;| ]+)/i,
+    /(?:total\s+)?filament(?:\s+used)?\s*[:=]\s*([0-9.,;| ]+)\s*g\b/i,
+    /filament_used_g\s*[:=]\s*([0-9.,;| ]+)/i,
+    /filament_weight(?:_total)?\s*[:=]\s*([0-9.,;| ]+)/i
+  ];
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (!match) continue;
+    const total = sumNumberList(match[1]);
+    if (total != null) return total;
   }
-  return lines;
+  return null;
 }
 
-// PrusaSlicer writes filament/time summaries near the end of the file.
-function scanFooterCommentLines(text, { maxLines = 500 } = {}) {
-  const all = text.split(/\r?\n/);
-  const start = Math.max(0, all.length - maxLines);
-  const lines = [];
-  for (let i = start; i < all.length; i += 1) {
-    const trimmed = all[i].trim();
-    if (trimmed.startsWith(';')) lines.push(trimmed);
+function lengthFromLine(line) {
+  const patterns = [
+    /total\s+filament\s+length\s*(?:\[\s*mm\s*\])?\s*[:=]\s*([0-9.,;| ]+)/i,
+    /(?:total\s+)?filament(?:\s+used)?\s*\[\s*mm\s*\]\s*[:=]\s*([0-9.,;| ]+)/i,
+    /filament_used_mm\s*[:=]\s*([0-9.,;| ]+)/i,
+    /filament_length\s*[:=]\s*([0-9.,;| ]+)/i
+  ];
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (!match) continue;
+    const total = sumNumberList(match[1]);
+    if (total != null) return total;
   }
-  return lines;
+  return null;
 }
 
-function deriveWeightG(lengthMm, diameterMm, densityGcm3) {
-  if (!Number.isFinite(lengthMm) || !Number.isFinite(diameterMm) || !Number.isFinite(densityGcm3)) return null;
-  const radiusMm = diameterMm / 2;
-  const volumeMm3 = Math.PI * radiusMm * radiusMm * lengthMm;
-  return (volumeMm3 / 1000) * densityGcm3;
+function volumeFromLine(line) {
+  const patterns = [
+    /total\s+filament\s+volume\s*(?:\[\s*cm\s*\^?\s*3\s*\])?\s*[:=]\s*([0-9.,;| ]+)/i,
+    /(?:total\s+)?filament(?:\s+used)?\s*\[\s*cm3\s*\]\s*[:=]\s*([0-9.,;| ]+)/i,
+    /filament_used_cm3\s*[:=]\s*([0-9.,;| ]+)/i,
+    /filament_volume\s*[:=]\s*([0-9.,;| ]+)/i
+  ];
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (!match) continue;
+    const total = sumNumberList(match[1]);
+    if (total != null) return total;
+  }
+  return null;
 }
 
 function parseCommentMetadata(lines) {
@@ -93,23 +122,14 @@ function parseCommentMetadata(lines) {
     }
     if (/^;\s*bambustudio\b/i.test(line)) metadata.slicer ||= line.replace(/^;\s*/, '');
 
-    weightG ??= numberAfter(line, /total filament weight\s*\[\s*g\s*\]\s*:\s*([\d.]+)/i)
-      ?? numberAfter(line, /(?:total\s+)?filament(?:\s+used)?\s*(?:\[\s*g\s*\]|weight)?\s*[:=]\s*([\d.]+)\s*g?\b/i)
-      ?? numberAfter(line, /(?:filament_weight|total filament weight)\s*[:=]\s*([\d.]+)/i)
-      ?? numberAfter(line, /filament used:\s*([\d.]+)\s*g/i);
+    weightG ??= weightFromLine(line);
+    filamentVolCm3 ??= volumeFromLine(line);
+    filamentLengthMm ??= lengthFromLine(line);
 
-    filamentVolCm3 ??= numberAfter(line, /total filament volume\s*\[\s*cm\s*\^?\s*3\s*\]\s*:\s*([\d.]+)/i)
-      ?? numberAfter(line, /(?:total\s+)?filament(?:\s+used)?\s*\[\s*cm3\s*\]\s*[:=]\s*([\d.]+)/i)
-      ?? numberAfter(line, /(?:filament_volume|filament volume)\s*[:=]\s*([\d.]+)/i);
-
-    filamentLengthMm ??= numberAfter(line, /total filament length\s*\[\s*mm\s*\]\s*:\s*([\d.]+)/i)
-      ?? numberAfter(line, /(?:total\s+)?filament(?:\s+used)?\s*\[\s*mm\s*\]\s*[:=]\s*([\d.]+)/i)
-      ?? numberAfter(line, /(?:filament_length|filament length)\s*[:=]\s*([\d.]+)/i);
-
-    const totalTime = line.match(/total estimated time\s*:\s*([^;]+)/i)?.[1]?.trim();
+    const totalTime = line.match(/total estimated time\s*[:=]\s*([^;]+)/i)?.[1]?.trim();
     if (totalTime) printTimeSec = hms(totalTime) ?? n(totalTime);
 
-    const modelTime = line.match(/model printing time\s*:\s*([^;]+)/i)?.[1]?.trim();
+    const modelTime = line.match(/model printing time\s*[:=]\s*([^;]+)/i)?.[1]?.trim();
     if (modelTime) modelPrintTimeSec = hms(modelTime) ?? n(modelTime);
 
     if (printTimeSec == null) {
@@ -122,8 +142,8 @@ function parseCommentMetadata(lines) {
       if (curaTime) printTimeSec = n(curaTime);
     }
 
-    metadata.maxZHeightMm ??= numberAfter(line, /max_z_height\s*:\s*([\d.]+)/i);
-    metadata.layerCount ??= numberAfter(line, /total layer number\s*:\s*(\d+)/i);
+    metadata.maxZHeightMm ??= numberAfter(line, /max_z_height\s*[:=]\s*([\d.]+)/i);
+    metadata.layerCount ??= numberAfter(line, /total layer number\s*[:=]\s*(\d+)/i);
 
     metadata.filamentDensityGcm3 ??= numberAfter(line, /filament_density\s*[:=]\s*([\d.]+)/i);
     metadata.filamentDiameterMm ??= numberAfter(line, /filament_diameter\s*[:=]\s*([\d.]+)/i);
@@ -160,6 +180,51 @@ function parseCommentMetadata(lines) {
     metadata,
     confidence
   };
+}
+
+function extractHeaderBlock(text) {
+  const match = text.match(/;\s*HEADER_BLOCK_START([\s\S]*?);\s*HEADER_BLOCK_END/i);
+  return match ? match[1] : null;
+}
+
+function scanCommentLines(text, { stopAtConfig = true, maxLines = 2500 } = {}) {
+  const lines = [];
+  for (const raw of text.split(/\r?\n/)) {
+    if (lines.length >= maxLines) break;
+    const trimmed = raw.trim();
+    if (stopAtConfig && /^;\s*CONFIG_BLOCK_START/i.test(trimmed)) break;
+    if (trimmed.startsWith(';')) lines.push(trimmed);
+  }
+  return lines;
+}
+
+// PrusaSlicer writes filament/time summaries near the end of the file.
+function scanFooterCommentLines(text, { maxLines = 800 } = {}) {
+  const all = text.split(/\r?\n/);
+  const start = Math.max(0, all.length - maxLines);
+  const lines = [];
+  for (let i = start; i < all.length; i += 1) {
+    const trimmed = all[i].trim();
+    if (trimmed.startsWith(';')) lines.push(trimmed);
+  }
+  return lines;
+}
+
+function scanConfigCommentLines(text, { maxLines = 800 } = {}) {
+  const configMatch = text.match(/;\s*CONFIG_BLOCK_START([\s\S]*?);\s*CONFIG_BLOCK_END/i);
+  if (!configMatch) return [];
+  return configMatch[1]
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.startsWith(';'))
+    .slice(0, maxLines);
+}
+
+function deriveWeightG(lengthMm, diameterMm, densityGcm3) {
+  if (!Number.isFinite(lengthMm) || !Number.isFinite(diameterMm) || !Number.isFinite(densityGcm3)) return null;
+  const radiusMm = diameterMm / 2;
+  const volumeMm3 = Math.PI * radiusMm * radiusMm * lengthMm;
+  return (volumeMm3 / 1000) * densityGcm3;
 }
 
 export function bboxFromGcode(text, { maxMoves = 400000 } = {}) {
@@ -266,10 +331,14 @@ export function parseGcode(input, { segments = false, maxSegments = 10000, bbox 
   const headerLines = headerBlock
     ? headerBlock.split(/\r?\n/).map(line => line.trim()).filter(line => line.startsWith(';'))
     : [];
-  // Prefer Bambu HEADER_BLOCK when present. Otherwise scan head + footer so Prusa CLI stats are found.
-  const commentLines = headerLines.length
-    ? headerLines
-    : [...scanCommentLines(text), ...scanFooterCommentLines(text)];
+  // Merge HEADER_BLOCK + head comments + config + footer. Some Bambu/Orca exports
+  // put printer/type in CONFIG and weight/time only in header or footer.
+  const commentLines = [
+    ...headerLines,
+    ...scanCommentLines(text),
+    ...scanConfigCommentLines(text),
+    ...scanFooterCommentLines(text)
+  ];
   const parsed = parseCommentMetadata(commentLines);
   const config = scanConfigKeys(text);
   parsed.metadata.printerModel ||= config.printerModel;

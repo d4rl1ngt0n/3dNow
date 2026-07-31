@@ -319,7 +319,7 @@ function drawMetrics(metrics, quote) {
     $('#metric-note').textContent = quote
       ? 'Production estimate is based on verified print time, printer rate, and your requested quantity.'
       : 'Business estimates need a sliced G-code or a 3MF with embedded G-code (verified print time and printer).';
-  } else if (metrics.confidence === 'header' || metrics.source === 'slicer') {
+  } else if (metrics.confidence === 'header' || metrics.source === 'slicer' || metrics.source === 'gcode' || metrics.source === '3mf-gcode') {
     $('#metric-note').textContent = 'Sliced metadata is verified for an automatic student quote.';
   } else if (metrics.confidence === 'partial') {
     $('#metric-note').textContent = 'Partial sliced metadata was found. Review weight and print time before quoting.';
