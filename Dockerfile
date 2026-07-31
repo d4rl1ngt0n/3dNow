@@ -10,14 +10,19 @@ RUN npm run build
 
 FROM node:20-bookworm-slim AS runtime
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends prusa-slicer \
-  && rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends prusa-slicer xvfb \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /home/node/.config /var/lib/3dnow \
+  && chown -R node:node /home/node /var/lib/3dnow
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY server ./server
 COPY --from=build /app/dist ./dist
-ENV NODE_ENV=production PORT=3000 PRUSA_SLICER_PATH=prusa-slicer
+ENV NODE_ENV=production \
+    PORT=3000 \
+    PRUSA_SLICER_PATH=prusa-slicer \
+    HOME=/home/node
 RUN mkdir -p server/uploads server/output/gcode \
   && chown -R node:node /app
 USER node
