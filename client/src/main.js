@@ -258,8 +258,8 @@ function customerReviewMessage(warning) {
   if (/printer could not be determined from sliced g-code metadata/i.test(warning || '')) {
     return 'We are confirming production details before issuing your quote.';
   }
-  if (/automatic slicing is paused/i.test(warning || '')) {
-    return 'For an instant quote, upload a sliced G-code or a 3MF with embedded G-code. Unsliced files are reviewed manually for now.';
+  if (/server slicer is unavailable/i.test(warning || '')) {
+    return 'Automatic slicing is temporarily unavailable. Upload a sliced G-code or a 3MF with embedded G-code for an instant quote, or we will review your file manually.';
   }
   return warning || 'We are reviewing your file before issuing a quote.';
 }

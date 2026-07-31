@@ -81,7 +81,7 @@ Environment variables: `PORT` (default 3000), `PUBLIC_URL`, `PRUSA_SLICER_PATH`,
 
 ## Supported files and validity
 
-Instant quotes focus on **already sliced** uploads: G-code, GCO, NC, and 3MF with embedded G-code. Weight and print time come from their metadata. Automatic slicing of STL, OBJ, and mesh-only 3MF is paused for now; those uploads still preview and go to manual review. Exact automatic pricing is produced only when both weight and time are present in trusted G-code headers. Missing metadata is manual review, never an estimate.
+Instant quotes use sliced metadata from G-code, GCO, NC, and 3MF files with embedded G-code. STL, OBJ, and mesh-only 3MF uploads are sliced automatically when the server slicer is available (Docker image or host PrusaSlicer). Exact automatic pricing is produced only when both weight and time are present in trusted G-code headers. Missing metadata is manual review, never an estimate.
 
 Uploads are capped at 100 MB. 3MF archives have entry, path, and decompression limits. Output directories are not web-served.
 

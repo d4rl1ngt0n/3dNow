@@ -190,27 +190,33 @@ async function process(job) {
         const route = routePrinter(job.metrics.bboxMm);
         job.metrics.printer = route.printer || null;
         job.metrics.source = '3mf-mesh';
-        if (route.error) job.warnings.push(route.error);
-        job.warnings.push('Automatic slicing is paused. Upload a sliced G-code or a 3MF with embedded G-code for an instant quote.');
-        job.status = 'manual-review';
-        job.sliceStatus = 'skipped';
-        job.progress = 100;
+        if (route.error) {
+          job.warnings.push(route.error);
+          job.status = 'manual-review';
+          job.sliceStatus = 'skipped';
+          job.progress = 100;
+          return;
+        }
+        await sliceAndQuote(job, route);
         return;
       }
 
       throw new Error('3MF contains no readable mesh or embedded G-code.');
     }
 
-    // Unsliced mesh formats (STL/OBJ): preview/geometry only. Quotes come from G-code metadata for now.
+    // Unsliced mesh formats (STL/OBJ): slice on the server, then quote from generated G-code.
     job.metrics.bboxMm = modelBounds(job.format, data);
     const route = routePrinter(job.metrics.bboxMm);
     job.metrics.printer = route.printer || null;
     job.metrics.source = job.format;
-    if (route.error) job.warnings.push(route.error);
-    job.warnings.push('Automatic slicing is paused. Upload a sliced G-code or a 3MF with embedded G-code for an instant quote.');
-    job.status = 'manual-review';
-    job.sliceStatus = 'skipped';
-    job.progress = 100;
+    if (route.error) {
+      job.warnings.push(route.error);
+      job.status = 'manual-review';
+      job.sliceStatus = 'skipped';
+      job.progress = 100;
+      return;
+    }
+    await sliceAndQuote(job, route);
   } catch (error) {
     job.status = error.message.includes('unavailable') || error.message.includes('build volume') ? 'manual-review' : 'error';
     job.sliceStatus = 'error';
@@ -288,8 +294,76 @@ jobsRouter.get('/:jobId', (req, res) => {
 jobsRouter.post('/:jobId/reslice', async (req, res) => {
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job not found' });
-  return res.status(409).json({
-    error: 'Automatic slicing is paused. Upload a sliced G-code or a 3MF with embedded G-code for an instant quote.'
+  if (!['stl', 'obj', '3mf'].includes(job.format)) {
+    return res.status(409).json({ error: 'Only mesh uploads can be re-sliced.' });
+  }
+
+  if (job.format === '3mf') {
+    try {
+      const info = inspect3mf(await fs.readFile(job.filePath));
+      if (info.gcodeFiles.length) {
+        return res.status(409).json({ error: 'This 3MF already contains sliced G-code.' });
+      }
+      if (!info.geometry) {
+        return res.status(409).json({ error: 'This 3MF has no mesh to slice.' });
+      }
+      applyGeometry(job, info.geometry);
+    } catch (error) {
+      return res.status(409).json({ error: error.message || 'Unable to inspect 3MF for re-slice.' });
+    }
+  } else if (!job.metrics.bboxMm) {
+    try {
+      const data = await fs.readFile(job.filePath);
+      job.metrics.bboxMm = modelBounds(job.format, data);
+    } catch (error) {
+      return res.status(409).json({ error: error.message || 'Unable to read mesh bounds for re-slice.' });
+    }
+  }
+
+  const normalized = normalizeSliceSettings({
+    ...job.profiles,
+    nozzleDiameterMm: req.body?.nozzleDiameterMm ?? req.body?.nozzle ?? job.profiles?.nozzleDiameterMm,
+    layerHeightMm: req.body?.layerHeightMm ?? req.body?.layerHeight ?? job.profiles?.layerHeightMm,
+    infill: req.body?.infill ?? job.profiles?.infill,
+    walls: req.body?.walls ?? job.profiles?.walls,
+    speedPreset: req.body?.speedPreset ?? job.profiles?.speedPreset
+  });
+  if (normalized.error) return res.status(400).json({ error: normalized.error });
+  if (normalized.settings) job.profiles = { ...DEFAULT_SLICE_SETTINGS, ...job.profiles, ...normalized.settings };
+
+  const material = resolveMaterialInput(req.body?.material || job.material);
+  if (!material) return res.status(400).json({ error: 'Unsupported material' });
+  job.material = material.sliceMaterial;
+  job.requestedMaterial = material.requestedMaterial;
+  job.quote = null;
+  job.error = null;
+  job.warnings = [];
+  job.outputPaths = [];
+  job.metrics = {
+    ...baseMetrics(job.format === '3mf' ? '3mf-mesh' : job.format),
+    bboxMm: job.metrics.bboxMm,
+    volumeCm3: job.metrics.volumeCm3,
+    surfaceAreaCm2: job.metrics.surfaceAreaCm2,
+    triangleCount: job.metrics.triangleCount,
+    isManifold: job.metrics.isManifold
+  };
+
+  const route = routePrinter(job.metrics.bboxMm);
+  job.metrics.printer = route.printer || null;
+  if (route.error) {
+    job.warnings.push(route.error);
+    job.status = 'manual-review';
+    job.sliceStatus = 'skipped';
+    job.progress = 100;
+    return res.status(409).json({ error: route.error, ...publicJob(job) });
+  }
+
+  res.status(202).json(publicJob(job));
+  sliceAndQuote(job, route).catch(error => {
+    job.status = error.message.includes('unavailable') || error.message.includes('build volume') ? 'manual-review' : 'error';
+    job.sliceStatus = 'error';
+    job.error = error.message;
+    job.warnings.push(error.message);
   });
 });
 
