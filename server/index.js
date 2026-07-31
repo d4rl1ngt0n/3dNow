@@ -9,8 +9,10 @@ import { adminRouter } from './routes/admin.js';
 import { shopifyWebhooksRouter } from './routes/shopify-webhooks.js';
 import { slicerAvailable } from './services/slicer.js';
 import { ensureStorage } from './services/storage.js';
+import { loadRuntimeSettings } from './services/runtime-settings.js';
 
 await ensureStorage();
+await loadRuntimeSettings();
 const app = express();
 const dist = path.join(config.root, 'dist');
 const marketingSite = path.join(config.root, '3dnow_17.html');

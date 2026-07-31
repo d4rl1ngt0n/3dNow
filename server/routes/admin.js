@@ -3,7 +3,12 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { orderStore } from '../services/order-store.js';
 import { STATUS_LABELS, customerStatusCopy } from '../services/orders.js';
-import { sendCustomerStatusUpdate } from '../services/mail.js';
+import { sendCustomerStatusUpdate, resetMailTransport } from '../services/mail.js';
+import {
+  getRuntimeSettings,
+  publicSettingsView,
+  updateRuntimeSettings
+} from '../services/runtime-settings.js';
 import {
   adminConfigured,
   createAdminSession,
@@ -12,6 +17,7 @@ import {
   requireAdmin,
   verifyAdminPassword
 } from '../middleware/admin-auth.js';
+import { config } from '../config.js';
 
 export const adminRouter = Router();
 
@@ -153,4 +159,66 @@ adminRouter.get('/orders/:id/files/:index', async (req, res) => {
 
   const downloadName = file.originalname || file.filename || path.basename(file.path);
   res.download(file.path, downloadName);
+});
+
+adminRouter.get('/settings', async (_req, res) => {
+  await getRuntimeSettings();
+  res.json({ settings: publicSettingsView() });
+});
+
+adminRouter.put('/settings', async (req, res) => {
+  try {
+    await updateRuntimeSettings(req.body || {});
+    resetMailTransport();
+    res.json({ settings: publicSettingsView(), ok: true });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Could not save settings.' });
+  }
+});
+
+adminRouter.post('/settings/test-email', async (req, res) => {
+  const to = String(req.body?.to || config.notifyTo || '').trim();
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    return res.status(400).json({ error: 'Enter a valid test recipient email.' });
+  }
+  try {
+    if (!config.smtp.host || !config.smtp.user || !config.smtp.pass) {
+      return res.status(400).json({ ok: false, delivered: false, reason: 'SMTP is not configured.' });
+    }
+    const nodemailer = (await import('nodemailer')).default;
+    const transport = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: config.smtp.secure,
+      requireTLS: !config.smtp.secure,
+      auth: { user: config.smtp.user, pass: config.smtp.pass }
+    });
+    await transport.sendMail({
+      from: config.smtp.from || config.smtp.user,
+      to,
+      subject: '3DNow SMTP test',
+      text: [
+        'This is a test email from the 3DNow Ops settings page.',
+        `Public URL: ${config.publicUrl}`,
+        `SMTP host: ${config.smtp.host}`,
+        `From: ${config.smtp.from || config.smtp.user}`
+      ].join('\n')
+    });
+    return res.json({ ok: true, delivered: true, to });
+  } catch (error) {
+    return res.status(500).json({ ok: false, delivered: false, reason: error.message });
+  }
+});
+
+adminRouter.get('/settings/shopify-status', async (_req, res) => {
+  try {
+    const { ensureOrdersPaidWebhook, shopifyConfigured } = await import('../services/shopify-checkout.js');
+    if (!shopifyConfigured()) {
+      return res.json({ ok: false, reason: 'Shopify is not configured yet.' });
+    }
+    const result = await ensureOrdersPaidWebhook();
+    return res.status(result.ok ? 200 : 500).json(result);
+  } catch (error) {
+    return res.status(500).json({ ok: false, reason: error.message });
+  }
 });

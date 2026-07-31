@@ -1,16 +1,20 @@
 import './admin.css';
 
 const TOKEN_KEY = '3dnow_admin_token';
+const NEEDS_ACTION = new Set(['new', 'awaiting-payment', 'quoted', 'reviewing']);
+
 const state = {
   token: localStorage.getItem(TOKEN_KEY) || '',
   configured: true,
+  view: 'inbox',
+  inboxTab: 'needs-action',
   orders: [],
   labels: {},
   statuses: [],
   stats: null,
+  settings: null,
   selectedId: null,
-  filters: { q: '', type: '', status: '' },
-  busy: false,
+  filters: { q: '', type: '' },
   error: '',
   toast: ''
 };
@@ -106,6 +110,20 @@ function selectedOrder() {
   return state.orders.find(order => order.id === state.selectedId) || null;
 }
 
+function filteredOrders() {
+  let list = state.orders;
+  if (state.inboxTab === 'needs-action') list = list.filter(o => NEEDS_ACTION.has(o.status));
+  else if (state.inboxTab === 'paid') list = list.filter(o => o.status === 'paid');
+  else if (state.inboxTab === 'production') {
+    list = list.filter(o => ['in-production', 'shipped', 'ready-pickup', 'completed'].includes(o.status));
+  }
+  return list;
+}
+
+function needsActionCount() {
+  return state.orders.filter(o => NEEDS_ACTION.has(o.status)).length;
+}
+
 async function bootstrap() {
   try {
     const status = await fetch('/api/admin/status').then(r => r.json());
@@ -129,7 +147,6 @@ async function refresh() {
   const query = new URLSearchParams();
   if (state.filters.q) query.set('q', state.filters.q);
   if (state.filters.type) query.set('type', state.filters.type);
-  if (state.filters.status) query.set('status', state.filters.status);
   const [list, stats] = await Promise.all([
     api(`/orders?${query}`),
     api('/stats')
@@ -139,9 +156,77 @@ async function refresh() {
   state.statuses = list.statuses || [];
   state.stats = stats;
   if (state.selectedId && !state.orders.some(order => order.id === state.selectedId)) {
-    state.selectedId = state.orders[0]?.id || null;
+    state.selectedId = null;
   }
-  if (!state.selectedId && state.orders[0]) state.selectedId = state.orders[0].id;
+  const visible = filteredOrders();
+  if (!state.selectedId && visible[0]) state.selectedId = visible[0].id;
+}
+
+async function loadSettings() {
+  const result = await api('/settings');
+  state.settings = result.settings;
+}
+
+function shell(content) {
+  return `
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="sidebar-brand" href="/admin">
+          <img src="/brand-logo" alt="3DNow"/>
+          <span><strong>3DNow Ops</strong><span>Production desk</span></span>
+        </a>
+        <nav class="nav" aria-label="Ops navigation">
+          <button class="nav-btn ${state.view === 'inbox' ? 'active' : ''}" type="button" data-view="inbox">
+            Inbox <span class="nav-count">${needsActionCount()}</span>
+          </button>
+          <button class="nav-btn ${state.view === 'settings' ? 'active' : ''}" type="button" data-view="settings">
+            Settings
+          </button>
+        </nav>
+        <div class="sidebar-foot">
+          <button class="btn btn-sm" type="button" id="refresh-btn">Refresh</button>
+          <button class="btn btn-sm btn-danger" type="button" id="logout-btn">Sign out</button>
+        </div>
+      </aside>
+      <div class="workspace">
+        ${content}
+        ${state.toast ? `<div class="toast" role="status">${escapeHtml(state.toast)}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function bindShell() {
+  app.querySelectorAll('[data-view]').forEach(button => {
+    button.addEventListener('click', async () => {
+      state.view = button.getAttribute('data-view');
+      if (state.view === 'settings') {
+        try {
+          await loadSettings();
+        } catch (error) {
+          showToast(error.message);
+        }
+      }
+      render();
+    });
+  });
+
+  document.getElementById('refresh-btn')?.addEventListener('click', async () => {
+    try {
+      if (state.view === 'settings') await loadSettings();
+      else await refresh();
+      render();
+      showToast(state.view === 'settings' ? 'Settings refreshed' : 'Inbox refreshed');
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    try { await api('/logout', { method: 'POST' }); } catch { /* ignore */ }
+    clearSession();
+    render();
+  });
 }
 
 function renderLogin() {
@@ -149,7 +234,7 @@ function renderLogin() {
     <div class="login-wrap">
       <form class="login-card" id="login-form">
         <h1>3DNow Ops</h1>
-        <p class="lede">Sign in to review inbound requests and update customers when production moves forward.</p>
+        <p class="lede">Sign in to manage orders, quotes, and handover settings.</p>
         ${state.configured ? '' : '<div class="error">Set ADMIN_PASSWORD on the server before using the dashboard.</div>'}
         ${state.error ? `<div class="error">${escapeHtml(state.error)}</div>` : ''}
         <div class="field">
@@ -186,81 +271,80 @@ function renderLogin() {
   });
 }
 
-function renderDashboard() {
+function renderInbox() {
   const order = selectedOrder();
-  const stats = state.stats || { total: 0, open: 0, byStatus: {}, byType: {} };
+  const stats = state.stats || { total: 0, open: 0, byStatus: {} };
+  const list = filteredOrders();
 
-  app.innerHTML = `
-    <div class="app-shell">
-      <header class="topbar">
-        <a class="brand" href="/admin">
-          <img src="/brand-logo" alt="3DNow"/>
-          <span class="brand-copy"><strong>Ops</strong><span>Order management</span></span>
-        </a>
-        <div class="topbar-actions">
-          <button class="btn" type="button" id="refresh-btn">Refresh</button>
-          <button class="btn btn-danger" type="button" id="logout-btn">Sign out</button>
-        </div>
-      </header>
+  app.innerHTML = shell(`
+    <div class="workspace-head">
+      <div>
+        <h1>Inbox</h1>
+        <p>Orders, quotes, and form requests from anfrage and the storefront.</p>
+      </div>
+      <div class="workspace-actions">
+        <button class="btn" type="button" id="refresh-head">Refresh</button>
+      </div>
+    </div>
+    <div class="workspace-body">
+      <div class="stats">
+        <div class="stat"><strong>${needsActionCount()}</strong><span>Needs action</span></div>
+        <div class="stat"><strong>${stats.byStatus?.paid || 0}</strong><span>Paid</span></div>
+        <div class="stat"><strong>${stats.byStatus?.['in-production'] || 0}</strong><span>In production</span></div>
+        <div class="stat"><strong>${stats.total || 0}</strong><span>Total</span></div>
+      </div>
 
-      <main class="layout">
-        <section>
-          <div class="stats">
-            <div class="stat"><strong>${stats.open || 0}</strong><span>Open</span></div>
-            <div class="stat"><strong>${stats.byStatus?.paid || 0}</strong><span>Paid</span></div>
-            <div class="stat"><strong>${stats.byStatus?.['in-production'] || 0}</strong><span>In production</span></div>
-            <div class="stat"><strong>${stats.total || 0}</strong><span>Total</span></div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Inbox</h2>
-                <p>Everything customers have sent through the quote engine and forms.</p>
-              </div>
+      <div class="layout">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Queue</h2>
+              <p>${list.length} shown</p>
             </div>
-            <div class="panel-body">
-              <form class="filters" id="filter-form">
-                <div class="field">
-                  <label for="q">Search</label>
-                  <input id="q" name="q" value="${escapeHtml(state.filters.q)}" placeholder="Name, email, file, job id"/>
-                </div>
-                <div class="field">
-                  <label for="type">Type</label>
-                  <select id="type" name="type">
-                    <option value="">All types</option>
-                    ${['student-order', 'business-quote', 'private-quote', 'contact', 'idea', 'legacy-order'].map(type => `
-                      <option value="${type}" ${state.filters.type === type ? 'selected' : ''}>${typeLabel(type)}</option>
-                    `).join('')}
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="status">Status</label>
-                  <select id="status" name="status">
-                    <option value="">All statuses</option>
-                    ${state.statuses.map(status => `
-                      <option value="${status}" ${state.filters.status === status ? 'selected' : ''}>${escapeHtml(state.labels[status] || status)}</option>
-                    `).join('')}
-                  </select>
-                </div>
-                <div class="field">
-                  <label>&nbsp;</label>
-                  <button class="btn" type="submit">Filter</button>
-                </div>
-              </form>
+          </div>
+          <div class="panel-body">
+            <div class="tabs" role="tablist">
+              ${[
+                ['needs-action', 'Needs action'],
+                ['all', 'All'],
+                ['paid', 'Paid'],
+                ['production', 'Production']
+              ].map(([id, label]) => `
+                <button class="tab ${state.inboxTab === id ? 'active' : ''}" type="button" data-inbox-tab="${id}">${label}</button>
+              `).join('')}
+            </div>
 
-              <div class="order-list">
-                ${state.orders.length ? state.orders.map(item => `
-                  <button class="order-card ${item.id === state.selectedId ? 'active' : ''}" type="button" data-order-id="${item.id}">
-                    <div class="order-card-top">
-                      <strong>${escapeHtml(typeLabel(item.type))}</strong>
-                      ${statusBadge(item.status)}
-                    </div>
-                    <div class="summary">${escapeHtml(item.summary || item.filename || 'Untitled request')}</div>
-                    <div class="meta">${escapeHtml(item.customer?.email || item.customer?.phone || 'No contact')} · ${escapeHtml(formatDate(item.createdAt))}</div>
-                  </button>
-                `).join('') : '<div class="empty">No requests match these filters yet.</div>'}
+            <form class="filters" id="filter-form">
+              <div class="field">
+                <label for="q">Search</label>
+                <input id="q" name="q" value="${escapeHtml(state.filters.q)}" placeholder="Name, email, file, job id"/>
               </div>
+              <div class="field">
+                <label for="type">Type</label>
+                <select id="type" name="type">
+                  <option value="">All types</option>
+                  ${['student-order', 'business-quote', 'private-quote', 'contact', 'idea', 'legacy-order'].map(type => `
+                    <option value="${type}" ${state.filters.type === type ? 'selected' : ''}>${typeLabel(type)}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>&nbsp;</label>
+                <button class="btn" type="submit">Apply</button>
+              </div>
+            </form>
+
+            <div class="order-list">
+              ${list.length ? list.map(item => `
+                <button class="order-card ${item.id === state.selectedId ? 'active' : ''}" type="button" data-order-id="${item.id}">
+                  <div class="order-card-top">
+                    <strong>${escapeHtml(typeLabel(item.type))}</strong>
+                    ${statusBadge(item.status)}
+                  </div>
+                  <div class="summary">${escapeHtml(item.summary || item.filename || 'Untitled request')}</div>
+                  <div class="meta">${escapeHtml(item.customer?.email || item.customer?.phone || 'No contact')} · ${escapeHtml(formatDate(item.createdAt))}</div>
+                </button>
+              `).join('') : '<div class="empty">No requests in this view.</div>'}
             </div>
           </div>
         </section>
@@ -269,28 +353,32 @@ function renderDashboard() {
           <div class="panel-head">
             <div>
               <h2>Details</h2>
-              <p>${order ? 'Update status and notify the customer.' : 'Select a request from the inbox.'}</p>
+              <p>${order ? 'Update status, files, and customer updates.' : 'Select a request from the queue.'}</p>
             </div>
           </div>
           <div class="panel-body">
             ${order ? renderDetail(order) : '<div class="empty">Nothing selected.</div>'}
           </div>
         </aside>
-      </main>
-      ${state.toast ? `<div class="toast" role="status">${escapeHtml(state.toast)}</div>` : ''}
+      </div>
     </div>
-  `;
+  `);
 
-  document.getElementById('refresh-btn')?.addEventListener('click', async () => {
+  bindShell();
+
+  document.getElementById('refresh-head')?.addEventListener('click', async () => {
     await refresh();
     render();
     showToast('Inbox refreshed');
   });
 
-  document.getElementById('logout-btn')?.addEventListener('click', async () => {
-    try { await api('/logout', { method: 'POST' }); } catch { /* ignore */ }
-    clearSession();
-    render();
+  app.querySelectorAll('[data-inbox-tab]').forEach(button => {
+    button.addEventListener('click', () => {
+      state.inboxTab = button.getAttribute('data-inbox-tab');
+      const visible = filteredOrders();
+      if (!visible.some(o => o.id === state.selectedId)) state.selectedId = visible[0]?.id || null;
+      render();
+    });
   });
 
   document.getElementById('filter-form')?.addEventListener('submit', async event => {
@@ -298,8 +386,7 @@ function renderDashboard() {
     const form = new FormData(event.currentTarget);
     state.filters = {
       q: String(form.get('q') || '').trim(),
-      type: String(form.get('type') || ''),
-      status: String(form.get('status') || '')
+      type: String(form.get('type') || '')
     };
     await refresh();
     render();
@@ -320,8 +407,11 @@ function renderDashboard() {
     });
   });
 
-  const statusForm = document.getElementById('status-form');
-  statusForm?.addEventListener('submit', async event => {
+  bindDetailEvents(order);
+}
+
+function bindDetailEvents(order) {
+  document.getElementById('status-form')?.addEventListener('submit', async event => {
     event.preventDefault();
     if (!order) return;
     const form = new FormData(event.currentTarget);
@@ -424,7 +514,10 @@ function formatShipping(address) {
 
 function shopifyAdminOrderUrl(payment) {
   if (!payment?.shopifyOrderId) return null;
-  return `https://admin.shopify.com/store/u06a18-ue/orders/${payment.shopifyOrderId}`;
+  const shop = (state.settings?.shopify?.shop || 'u06a18-ue.myshopify.com')
+    .replace(/\.myshopify\.com$/i, '')
+    .replace(/^https?:\/\//, '');
+  return `https://admin.shopify.com/store/${shop}/orders/${payment.shopifyOrderId}`;
 }
 
 function packingLabelHtml(order) {
@@ -502,7 +595,7 @@ function renderDetail(order) {
 
       ${order.files?.length ? `
         <div>
-          <h3 style="font-size:14px;margin-bottom:8px">Files</h3>
+          <div class="section-title">Files</div>
           <div class="actions">
             ${order.files.map(file => `
               <button class="btn" type="button" data-download-order="${order.id}" data-download-index="${file.index}" ${file.available ? '' : 'disabled'}>
@@ -515,14 +608,15 @@ function renderDetail(order) {
 
       ${details.message || details.description || details.configuration ? `
         <div>
-          <h3 style="font-size:14px;margin-bottom:8px">Message</h3>
+          <div class="section-title">Message</div>
           <p style="white-space:pre-wrap;font-size:13px;color:var(--muted)">${escapeHtml(details.message || details.description || details.configuration)}</p>
         </div>
       ` : ''}
 
       <form id="status-form" class="detail-grid">
+        <div class="section-title">Production</div>
         <div class="field">
-          <label for="status-select">Production status</label>
+          <label for="status-select">Status</label>
           <select id="status-select" name="status">
             ${state.statuses.map(status => `
               <option value="${status}" ${order.status === status ? 'selected' : ''}>${escapeHtml(state.labels[status] || status)}</option>
@@ -543,7 +637,7 @@ function renderDetail(order) {
       </form>
 
       <form id="notify-form" class="detail-grid">
-        <h3 style="font-size:14px">Notify customer</h3>
+        <div class="section-title">Notify customer</div>
         <div class="field">
           <label for="notify-email">Email</label>
           <input id="notify-email" name="email" type="email" value="${escapeHtml(order.customer?.email || '')}" required/>
@@ -566,7 +660,7 @@ function renderDetail(order) {
       </form>
 
       <div>
-        <h3 style="font-size:14px;margin-bottom:8px">Status history</h3>
+        <div class="section-title">Status history</div>
         <div class="history">
           ${(order.statusHistory || []).slice().reverse().map(entry => `
             <div class="history-item">
@@ -578,7 +672,7 @@ function renderDetail(order) {
       </div>
 
       <div>
-        <h3 style="font-size:14px;margin-bottom:8px">Notifications sent</h3>
+        <div class="section-title">Notifications sent</div>
         <div class="history">
           ${(order.notifications || []).slice().reverse().map(entry => `
             <div class="history-item">
@@ -592,9 +686,273 @@ function renderDetail(order) {
   `;
 }
 
+function checkItem(label, ok) {
+  return `
+    <div class="check-item">
+      <strong>${escapeHtml(label)}</strong>
+      <span class="${ok ? 'check-ok' : 'check-bad'}">${ok ? 'Ready' : 'Needs setup'}</span>
+    </div>
+  `;
+}
+
+function renderSettings() {
+  const s = state.settings || {
+    checks: {},
+    smtp: {},
+    shopify: {},
+    stripe: {},
+    endpoints: {}
+  };
+  const secretPlaceholder = '••••••••';
+
+  app.innerHTML = shell(`
+    <div class="workspace-head">
+      <div>
+        <h1>Settings</h1>
+        <p>Handover configuration for email, Shopify, and ops access. Secrets stay masked after save.</p>
+      </div>
+    </div>
+    <div class="workspace-body">
+      <div class="settings-grid">
+        <section class="panel settings-card">
+          <div class="panel-head"><div><h2>Setup checklist</h2><p>What must be ready before you hand over.</p></div></div>
+          <div class="panel-body">
+            <div class="check-list">
+              ${checkItem('Admin password', s.checks?.adminPassword)}
+              ${checkItem('Public URL', s.checks?.publicUrl)}
+              ${checkItem('Notify email', s.checks?.notifyTo)}
+              ${checkItem('SMTP email delivery', s.checks?.smtp)}
+              ${checkItem('Shopify payments', s.checks?.shopify)}
+            </div>
+            ${s.endpoints?.shopifyWebhook ? `
+              <div>
+                <div class="section-title">Shopify webhook URL</div>
+                <div class="endpoint-box">${escapeHtml(s.endpoints.shopifyWebhook)}</div>
+              </div>
+            ` : ''}
+            <div class="actions">
+              <button class="btn" type="button" id="shopify-check-btn">Check Shopify connection</button>
+            </div>
+          </div>
+        </section>
+
+        <form class="panel settings-card" id="general-form">
+          <div class="panel-head"><div><h2>General</h2><p>Public site URL, alert inbox, and admin access.</p></div></div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="publicUrl">Public URL</label>
+              <input id="publicUrl" name="publicUrl" value="${escapeHtml(s.publicUrl || '')}" placeholder="https://anfrage.3d-now.de"/>
+              <span class="hint">Used for webhooks, emails, and admin links.</span>
+            </div>
+            <div class="field">
+              <label for="notifyTo">Ops notify email</label>
+              <input id="notifyTo" name="notifyTo" type="email" value="${escapeHtml(s.notifyTo || '')}" placeholder="ops@example.com"/>
+            </div>
+            <div class="field">
+              <label for="adminPassword">Change admin password</label>
+              <input id="adminPassword" name="adminPassword" type="password" autocomplete="new-password" placeholder="${s.adminPasswordConfigured ? secretPlaceholder : 'Set a password'}"/>
+              <span class="hint">Leave blank to keep the current password. Minimum 8 characters.</span>
+            </div>
+            <div class="actions"><button class="btn btn-primary" type="submit">Save general</button></div>
+          </div>
+        </form>
+
+        <form class="panel settings-card" id="smtp-form">
+          <div class="panel-head"><div><h2>Email (SMTP)</h2><p>Customer confirmations and ops alerts.</p></div></div>
+          <div class="panel-body">
+            <div class="field-row">
+              <div class="field">
+                <label for="smtpHost">SMTP host</label>
+                <input id="smtpHost" name="host" value="${escapeHtml(s.smtp?.host || '')}" placeholder="smtp.example.com"/>
+              </div>
+              <div class="field">
+                <label for="smtpPort">Port</label>
+                <input id="smtpPort" name="port" type="number" value="${escapeHtml(String(s.smtp?.port || 587))}"/>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="smtpUser">Username</label>
+                <input id="smtpUser" name="user" value="${escapeHtml(s.smtp?.user || '')}"/>
+              </div>
+              <div class="field">
+                <label for="smtpPass">Password</label>
+                <input id="smtpPass" name="pass" type="password" placeholder="${s.smtp?.passConfigured ? secretPlaceholder : 'SMTP password'}" autocomplete="new-password"/>
+              </div>
+            </div>
+            <div class="field">
+              <label for="smtpFrom">Sender (From)</label>
+              <input id="smtpFrom" name="from" value="${escapeHtml(s.smtp?.from || '')}" placeholder="3DNow <support@3d-now.de>"/>
+              <span class="hint">Display name and email customers will see.</span>
+            </div>
+            <label class="check-row">
+              <input type="checkbox" name="secure" ${s.smtp?.secure ? 'checked' : ''}/>
+              <span>Use SSL/TLS (usually port 465)</span>
+            </label>
+            <div class="field-row">
+              <div class="field">
+                <label for="testTo">Send test email to</label>
+                <input id="testTo" name="testTo" type="email" value="${escapeHtml(s.notifyTo || '')}"/>
+              </div>
+              <div class="field">
+                <label>&nbsp;</label>
+                <button class="btn" type="button" id="test-email-btn">Send test</button>
+              </div>
+            </div>
+            <div class="actions"><button class="btn btn-primary" type="submit">Save email</button></div>
+          </div>
+        </form>
+
+        <form class="panel settings-card" id="shopify-form">
+          <div class="panel-head"><div><h2>Shopify</h2><p>Draft order checkout and paid-order webhooks.</p></div></div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="shopifyShop">Shop domain</label>
+              <input id="shopifyShop" name="shop" value="${escapeHtml(s.shopify?.shop || '')}" placeholder="your-store.myshopify.com"/>
+            </div>
+            <div class="field">
+              <label for="shopifyClientId">Client ID</label>
+              <input id="shopifyClientId" name="clientId" value="${escapeHtml(s.shopify?.clientId || '')}"/>
+            </div>
+            <div class="field">
+              <label for="shopifyClientSecret">Client secret</label>
+              <input id="shopifyClientSecret" name="clientSecret" type="password" placeholder="${s.shopify?.clientSecretConfigured ? secretPlaceholder : 'shpss_…'}" autocomplete="new-password"/>
+            </div>
+            <div class="field">
+              <label for="shopifyAccessToken">Legacy access token (optional)</label>
+              <input id="shopifyAccessToken" name="accessToken" type="password" placeholder="${s.shopify?.accessTokenConfigured ? secretPlaceholder : 'shpat_… only if you still have one'}" autocomplete="new-password"/>
+            </div>
+            <div class="field">
+              <label for="shopifyWebhookSecret">Webhook signing secret</label>
+              <input id="shopifyWebhookSecret" name="webhookSecret" type="password" placeholder="${s.shopify?.webhookSecretConfigured ? secretPlaceholder : 'Usually same as client secret'}" autocomplete="new-password"/>
+            </div>
+            <div class="actions"><button class="btn btn-primary" type="submit">Save Shopify</button></div>
+          </div>
+        </form>
+
+        <form class="panel settings-card" id="stripe-form">
+          <div class="panel-head"><div><h2>Stripe (optional / legacy)</h2><p>Only needed if you still use Stripe webhooks.</p></div></div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="stripeSecret">Secret key</label>
+              <input id="stripeSecret" name="secretKey" type="password" placeholder="${s.stripe?.secretKeyConfigured ? secretPlaceholder : 'sk_…'}" autocomplete="new-password"/>
+            </div>
+            <div class="field">
+              <label for="stripeWebhook">Webhook secret</label>
+              <input id="stripeWebhook" name="webhookSecret" type="password" placeholder="${s.stripe?.webhookSecretConfigured ? secretPlaceholder : 'whsec_…'}" autocomplete="new-password"/>
+            </div>
+            <div class="actions"><button class="btn btn-primary" type="submit">Save Stripe</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  `);
+
+  bindShell();
+
+  document.getElementById('general-form')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const body = {
+        publicUrl: form.get('publicUrl'),
+        notifyTo: form.get('notifyTo')
+      };
+      const password = String(form.get('adminPassword') || '');
+      if (password && !/^•+$/.test(password)) body.adminPassword = password;
+      const result = await api('/settings', { method: 'PUT', body });
+      state.settings = result.settings;
+      showToast('General settings saved');
+      render();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.getElementById('smtp-form')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const pass = String(form.get('pass') || '');
+      const body = {
+        smtp: {
+          host: form.get('host'),
+          port: form.get('port'),
+          user: form.get('user'),
+          from: form.get('from'),
+          secure: form.get('secure') === 'on'
+        }
+      };
+      if (pass && !/^•+$/.test(pass)) body.smtp.pass = pass;
+      const result = await api('/settings', { method: 'PUT', body });
+      state.settings = result.settings;
+      showToast('Email settings saved');
+      render();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.getElementById('test-email-btn')?.addEventListener('click', async () => {
+    const to = document.getElementById('testTo')?.value || '';
+    try {
+      const result = await api('/settings/test-email', { method: 'POST', body: { to } });
+      showToast(result.delivered ? `Test email sent to ${result.to}` : `Test failed: ${result.reason || 'unknown'}`);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.getElementById('shopify-form')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const body = { shopify: { shop: form.get('shop'), clientId: form.get('clientId') } };
+      for (const key of ['clientSecret', 'accessToken', 'webhookSecret']) {
+        const value = String(form.get(key) || '');
+        if (value && !/^•+$/.test(value)) body.shopify[key] = value;
+      }
+      const result = await api('/settings', { method: 'PUT', body });
+      state.settings = result.settings;
+      showToast('Shopify settings saved');
+      render();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.getElementById('stripe-form')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const body = { stripe: {} };
+      for (const key of ['secretKey', 'webhookSecret']) {
+        const value = String(form.get(key) || '');
+        if (value && !/^•+$/.test(value)) body.stripe[key] = value;
+      }
+      const result = await api('/settings', { method: 'PUT', body });
+      state.settings = result.settings;
+      showToast('Stripe settings saved');
+      render();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.getElementById('shopify-check-btn')?.addEventListener('click', async () => {
+    try {
+      const result = await api('/settings/shopify-status');
+      showToast(result.ok ? `Shopify OK · webhook ${result.address}` : `Shopify issue: ${result.reason}`);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+}
+
 function render() {
   if (!state.token) renderLogin();
-  else renderDashboard();
+  else if (state.view === 'settings') renderSettings();
+  else renderInbox();
 }
 
 bootstrap();

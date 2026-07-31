@@ -87,6 +87,10 @@ function getTransporter() {
   return transporter;
 }
 
+export function resetMailTransport() {
+  transporter = null;
+}
+
 export async function emailAttachment(file) {
   if (!file?.path) return { attachment: null, reference: null };
   const size = file.size ?? (await fs.stat(file.path)).size;
