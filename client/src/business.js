@@ -155,17 +155,30 @@ function renderEstimate() {
   const quantity = Number(document.querySelector('#business-quantity')?.value) || 1;
   const status = document.querySelector('#request-status');
   const prototype = quantity === 1;
+  const cta = prototype ? 'Request prototype quote' : 'Request production quote';
   document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
-    button.textContent = 'Request production quote';
+    button.textContent = cta;
   });
   if (!quote) return;
-  document.querySelector('#summary-total').textContent = `€${quote.total.toFixed(2)}`;
-  document.querySelector('#mobile-total').textContent = `€${quote.total.toFixed(2)}`;
+
+  const productionTotal = Number(
+    quote.productionTotal
+      ?? (quote.total - (quote.speedCost || 0) - (quote.reviewCost || 0) - (quote.editingCost || 0))
+  );
+  const speed = selectedValue('#speed-options', 'speed', 'standard');
+  const engineering = selectedValue('#engineering-options', 'engineering');
+  const speedCost = speed === 'priority' ? 59 : speed === 'express' ? 39 : 0;
+  const reviewCost = engineering === 'review' ? 15 : 0;
+  const editingCost = engineering === 'editing' ? 110 : 0;
+  const total = Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2));
+
+  document.querySelector('#summary-total').textContent = `€${total.toFixed(2)}`;
+  document.querySelector('#mobile-total').textContent = `€${total.toFixed(2)}`;
   document.querySelector('#summary-subtitle').textContent = prototype
     ? 'Single prototype estimate (machine rate × 8)'
     : `Production estimate for ${quantity} pieces`;
   document.querySelector('#summary-package').textContent = prototype ? '1 prototype' : `${quantity} pieces`;
-  document.querySelector('#summary-hint').textContent = quote.editingCost
+  document.querySelector('#summary-hint').textContent = editingCost
     ? 'Estimate includes the first hour of file editing. Any additional editing time requires your approval before further charges.'
     : 'Estimate includes your selected production options.';
   if (status?.textContent === 'Updating production estimate…') status.textContent = '';

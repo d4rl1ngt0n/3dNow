@@ -42,7 +42,7 @@ if (!studentFlow) {
   const verificationField = $('#verification-options')?.closest('fieldset');
   if (verificationField) verificationField.hidden = true;
   document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
-    button.textContent = businessFlow ? 'Request production quote' : 'Request quote';
+    button.textContent = businessFlow ? 'Request prototype quote' : 'Request quote';
   });
 }
 state.preview = new Preview($('#preview'));
@@ -446,7 +446,11 @@ function requestIsReady(values = requestValues()) {
 function summaryHintText(values = requestValues()) {
   const missing = missingRequirements(values);
   if (!missing.length) {
-    if (businessFlow) return 'Ready to send your production quote request.';
+    if (businessFlow) {
+      return quantity === 1
+        ? 'Ready to send your prototype quote request.'
+        : 'Ready to send your production quote request.';
+    }
     if (privateFlow) return 'Ready to send your quote request.';
     return 'Ready for secure payment.';
   }
@@ -496,18 +500,40 @@ function renderOrderSummary() {
   updatePrivateDisclaimer();
   if (businessFlow) {
     const quantity = quote?.quantity || Number($('#business-quantity')?.value) || 1;
-    const engineering = request.engineering === 'review' ? 'Expert Review · +€15' : request.engineering === 'editing' ? 'Editing · €110/hour' : 'Not selected';
-    $('#summary-total').textContent = quote ? euro(quote.total) : 'Pending';
-    $('#mobile-total').textContent = quote ? euro(quote.total) : 'Pending';
-    $('#summary-subtitle').textContent = quote ? `Production estimate for ${quantity} pieces` : 'Upload a file to calculate your production estimate.';
+    const prototype = quantity === 1;
+    const productionTotal = quote
+      ? Number(
+        quote.productionTotal
+          ?? (quote.total - (quote.speedCost || 0) - (quote.reviewCost || 0) - (quote.editingCost || 0))
+      )
+      : null;
+    const speedCost = request.speed === 'priority' ? 59 : request.speed === 'express' ? 39 : 0;
+    const reviewCost = request.engineering === 'review' ? 15 : 0;
+    const editingCost = request.engineering === 'editing' ? 110 : 0;
+    const total = productionTotal != null ? Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2)) : null;
+    const engineering = request.engineering === 'review'
+      ? 'Expert Review · +€15'
+      : request.engineering === 'editing'
+        ? 'Editing · €110/hour'
+        : 'Not selected';
+    const cta = prototype ? 'Request prototype quote' : 'Request production quote';
+    $('#summary-total').textContent = total != null ? euro(total) : 'Pending';
+    $('#mobile-total').textContent = total != null ? euro(total) : 'Pending';
+    $('#summary-subtitle').textContent = quote
+      ? (prototype ? 'Single prototype estimate (machine rate × 8)' : `Production estimate for ${quantity} pieces`)
+      : 'Upload a file to calculate your production estimate.';
     $('#summary-file').textContent = state.file?.name || 'Not uploaded';
     $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : 'Pending';
-    $('#summary-package').textContent = `${quantity} pieces`;
+    $('#summary-package').textContent = prototype ? '1 prototype' : `${quantity} pieces`;
     $('#summary-material').textContent = displayMaterial();
-    $('#summary-speed').textContent = request.speed === 'priority' ? 'Priority · 2-3 days' : request.speed === 'express' ? 'Express · 4-6 days' : 'Standard · 7-10 days';
+    $('#summary-speed').textContent = request.speed === 'priority'
+      ? 'Priority · 2-3 days · +€59'
+      : request.speed === 'express'
+        ? 'Express · 4-6 days · +€39'
+        : 'Standard · 7-10 days';
     $('#summary-engineering').textContent = engineering;
     document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
-      button.textContent = 'Request production quote';
+      button.textContent = cta;
     });
     $('#summary-checkout').disabled = !ready;
     $('#mobile-checkout-button').disabled = !ready;
