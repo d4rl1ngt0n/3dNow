@@ -3,57 +3,104 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta name="description" content="Noch keine 3D-Datei? Schick uns Foto oder Skizze, wir helfen beim Modell."/>
+  <meta name="description" content="Noch keine 3D-Datei? Schick uns Foto oder Skizze. 3DNow gestaltet dein Modell und meldet sich mit den nächsten Schritten."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
-  <title>3DNow Design-Service</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <title>3DNow | Design-Service</title>
 </head>
-<body>
+<body class="fileservice-page">
+  <div class="fs-atmosphere" aria-hidden="true"></div>
   <header>
     <div class="wrap">
       <nav class="nav" aria-label="Primary navigation">
         <a class="brand" href="https://3d-now.de/" aria-label="3d-now.de home"><span class="brand-stack"><img class="brand-logo" src="/brand-logo" alt="3dnow.eu"><span class="brand-tagline">by iFactory3D</span></span></a>
-        <a class="signin" href="https://3d-now.de/pages/contact">Kontakt</a>
+        <div class="navlinks">
+          <a class="navlink" href="/quote-engine-students">Students</a>
+          <a class="navlink" href="/quote-engine-business">Business</a>
+          <a class="navlink" href="/quote-engine-private">Private</a>
+        </div>
+        <div class="langswitch" role="group" aria-label="Language">
+          <button type="button" data-lang="de" class="active" aria-pressed="true">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a class="signin" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
       </nav>
     </div>
   </header>
+
   <main class="fileservice-main">
-    <section class="intro">
-      <p class="eyebrow">Noch keine 3D-Datei?</p>
-      <h1>Wir helfen dir beim Modell.</h1>
-      <p>Lade ein Foto, eine Skizze oder eine Vorlage hoch und beschreibe deine Idee. Wir prüfen sie und melden uns mit den nächsten Schritten.</p>
+    <section class="fs-hero">
+      <p class="eyebrow" data-en="Design service" data-de="Design-Service">Design-Service</p>
+      <h1 data-en="No 3D file? <em>We'll design it.</em>" data-de="Keine 3D-Datei? <em>Wir gestalten sie.</em>">Keine 3D-Datei? <em>Wir gestalten sie.</em></h1>
+      <p class="fs-lede" data-en="Send a photo, sketch or reference. Tell us what you need. We review it and reply with the next steps, before any modelling work begins." data-de="Schick uns ein Foto, eine Skizze oder Vorlage. Sag uns, was du brauchst. Wir prüfen es und melden uns mit den nächsten Schritten, bevor die Modellierung startet.">Schick uns ein Foto, eine Skizze oder Vorlage. Sag uns, was du brauchst. Wir prüfen es und melden uns mit den nächsten Schritten, bevor die Modellierung startet.</p>
     </section>
-    <section class="fileservice-panel" aria-label="Design request form">
+
+    <ol class="fs-steps" aria-label="How it works">
+      <li><span>01</span><strong data-en="Send a reference" data-de="Referenz senden">Referenz senden</strong></li>
+      <li><span>02</span><strong data-en="We review the idea" data-de="Wir prüfen die Idee">Wir prüfen die Idee</strong></li>
+      <li><span>03</span><strong data-en="You get next steps" data-de="Du bekommst die nächsten Schritte">Du bekommst die nächsten Schritte</strong></li>
+    </ol>
+
+    <section class="fileservice-panel" aria-labelledby="fs-form-heading">
+      <div class="fs-panel-head">
+        <h2 id="fs-form-heading" data-en="Tell us about your idea" data-de="Erzähl uns von deiner Idee">Erzähl uns von deiner Idee</h2>
+        <p data-en="Required fields are marked. A clear photo or sketch helps a lot, but you can also start with a description only." data-de="Pflichtfelder sind markiert. Ein klares Foto oder eine Skizze hilft sehr, du kannst aber auch nur mit einer Beschreibung starten.">Pflichtfelder sind markiert. Ein klares Foto oder eine Skizze hilft sehr, du kannst aber auch nur mit einer Beschreibung starten.</p>
+      </div>
+
       <form id="idea-form" class="idea-form" novalidate>
         <div class="field-row">
-          <label class="field">Name
-            <input id="idea-name" name="name" type="text" required autocomplete="name" placeholder="Dein Name"/>
+          <label class="field"><span data-en="Name" data-de="Name">Name</span>
+            <input id="idea-name" name="name" type="text" required autocomplete="name" data-en-ph="Your name" data-de-ph="Dein Name" placeholder="Dein Name"/>
           </label>
-          <label class="field">E-Mail
-            <input id="idea-email" name="email" type="email" required autocomplete="email" placeholder="name@beispiel.de"/>
+          <label class="field"><span data-en="Email" data-de="E-Mail">E-Mail</span>
+            <input id="idea-email" name="email" type="email" required autocomplete="email" data-en-ph="you@example.com" data-de-ph="name@beispiel.de" placeholder="name@beispiel.de"/>
           </label>
         </div>
-        <label class="field">Telefon / WhatsApp
+
+        <label class="field"><span data-en="Phone / WhatsApp" data-de="Telefon / WhatsApp">Telefon / WhatsApp</span>
           <input id="idea-phone" name="phone" type="tel" autocomplete="tel" placeholder="+49 170 1234567"/>
-          <span class="quiet">Bitte eine Nummer, die über WhatsApp erreichbar ist.</span>
+          <span class="quiet" data-en="Use a number that is active on WhatsApp. That is how we will reach you." data-de="Bitte eine Nummer, die über WhatsApp erreichbar ist.">Bitte eine Nummer, die über WhatsApp erreichbar ist.</span>
         </label>
-        <label class="field">Foto oder Vorlage
-          <input id="idea-file" name="reference" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/*"/>
-          <span class="quiet">JPG, PNG, WEBP oder PDF, optional.</span>
+
+        <div class="field">
+          <span class="field-label" data-en="Photo or reference" data-de="Foto oder Vorlage">Foto oder Vorlage</span>
+          <label class="fs-dropzone" id="idea-dropzone" for="idea-file">
+            <input id="idea-file" name="reference" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/*"/>
+            <strong id="idea-file-label" data-en="Drop a file here or browse" data-de="Datei hier ablegen oder auswählen">Datei hier ablegen oder auswählen</strong>
+            <span class="quiet" data-en="JPG, PNG, WEBP or PDF. Optional." data-de="JPG, PNG, WEBP oder PDF. Optional.">JPG, PNG, WEBP oder PDF. Optional.</span>
+          </label>
+        </div>
+
+        <label class="field"><span data-en="Describe your idea" data-de="Beschreibe deine Idee">Beschreibe deine Idee</span>
+          <textarea id="idea-desc" name="description" required rows="5" data-en-ph="What should we create? Size, use, material wishes…" data-de-ph="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…" placeholder="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…"></textarea>
         </label>
-        <label class="field">Beschreibe deine Idee
-          <textarea id="idea-desc" name="description" required rows="5" placeholder="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…"></textarea>
-        </label>
-        <label class="field">Wunschtermin
+
+        <label class="field field-deadline"><span data-en="Preferred deadline" data-de="Wunschtermin">Wunschtermin</span>
           <input id="idea-deadline" name="deadline" type="date"/>
         </label>
-        <button class="btn btn-primary" id="idea-submit" type="submit">Idee senden</button>
+
+        <div class="fs-actions">
+          <button class="btn btn-primary" id="idea-submit" type="submit" data-en="Send idea" data-de="Idee senden">Idee senden</button>
+          <a class="fs-whatsapp" href="https://wa.me/4915754285020" target="_blank" rel="noopener" data-en="Or write on WhatsApp" data-de="Oder per WhatsApp schreiben">Oder per WhatsApp schreiben</a>
+        </div>
         <p id="idea-status" class="idea-status" role="status" aria-live="polite"></p>
-        <p id="idea-ok" class="form-ok" hidden>Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.</p>
+        <p id="idea-ok" class="form-ok" hidden data-en="Thanks, we received your idea and will get back to you with the next steps." data-de="Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.">Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.</p>
       </form>
     </section>
   </main>
+
+  <footer class="fs-footer">
+    <div class="wrap">
+      <p>© 2026 3dnow.eu · Düsseldorf</p>
+      <div class="legal-links">
+        <a href="https://3d-now.de/pages/impressum">Impressum</a>
+        <a href="https://3d-now.de/pages/datenschutz" data-en="Privacy" data-de="Datenschutz">Datenschutz</a>
+        <a href="https://3d-now.de/pages/agb" data-en="Terms" data-de="AGB">AGB</a>
+      </div>
+    </div>
+  </footer>
+
   <script type="module" src="/src/fileservice.js"></script>
 </body>
 </html>
