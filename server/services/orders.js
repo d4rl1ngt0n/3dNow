@@ -289,14 +289,18 @@ export async function registerContactSubmission({ name, email, phone, message })
   });
 }
 
-export async function registerIdeaSubmission({ name, email, phone, description, deadline, file }) {
+export async function registerIdeaSubmission({ name, email, phone, description, deadline, quantity, file }) {
   return orderStore.create({
     type: 'idea',
     flow: null,
     status: 'new',
-    summary: `Design request · ${name}`,
+    summary: `Design request · ${name}${quantity ? ` · ${quantity} pcs` : ''}`,
     customer: { name, email, phone: phone || null },
-    details: { description, deadline: deadline || null },
+    details: {
+      description,
+      deadline: deadline || null,
+      quantity: Number.isInteger(quantity) && quantity > 0 ? quantity : null
+    },
     files: [fileRef(file)].filter(Boolean),
     historyNote: 'Design request received'
   });

@@ -189,7 +189,7 @@ export async function sendCustomerBusinessQuoteConfirmation({ email, filename, t
   });
 }
 
-export async function sendCustomerIdeaConfirmation({ email, name, description, deadline }) {
+export async function sendCustomerIdeaConfirmation({ email, name, description, deadline, quantity }) {
   return sendEmail({
     to: email,
     subject: '3DNow received your design request',
@@ -200,6 +200,7 @@ export async function sendCustomerIdeaConfirmation({ email, name, description, d
       '',
       'Your request:',
       description,
+      `Number of prints: ${quantity || 'Not provided'}`,
       `Preferred deadline: ${deadline || 'Not provided'}`,
       '',
       '3DNow'

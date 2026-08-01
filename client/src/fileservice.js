@@ -16,6 +16,42 @@ const submit = $('#idea-submit');
 const fileInput = $('#idea-file');
 const dropzone = $('#idea-dropzone');
 const fileLabel = $('#idea-file-label');
+const deadlineInput = $('#idea-deadline');
+const quantityInput = $('#idea-quantity');
+
+function tomorrowIsoDate() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function applyDeadlineMin() {
+  if (!deadlineInput) return;
+  const min = tomorrowIsoDate();
+  deadlineInput.min = min;
+  if (deadlineInput.value && deadlineInput.value < min) deadlineInput.value = '';
+}
+
+applyDeadlineMin();
+deadlineInput?.addEventListener('focus', applyDeadlineMin);
+deadlineInput?.addEventListener('click', applyDeadlineMin);
+deadlineInput?.addEventListener('change', () => {
+  applyDeadlineMin();
+  if (deadlineInput.value && deadlineInput.value < deadlineInput.min) {
+    deadlineInput.value = '';
+    deadlineInput.setCustomValidity(
+      document.documentElement.lang === 'en'
+        ? 'Choose a future date.'
+        : 'Bitte ein Datum in der Zukunft wählen.'
+    );
+  } else {
+    deadlineInput.setCustomValidity('');
+  }
+});
 
 function setLang(lang) {
   const next = lang === 'en' ? 'en' : 'de';
@@ -87,11 +123,13 @@ form?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!form) return;
 
+  applyDeadlineMin();
   const name = $('#idea-name')?.value.trim() || '';
   const email = $('#idea-email')?.value.trim() || '';
   const phone = $('#idea-phone')?.value.trim() || '';
   const description = $('#idea-desc')?.value.trim() || '';
-  const deadline = $('#idea-deadline')?.value || '';
+  const deadline = deadlineInput?.value || '';
+  const quantity = Number(quantityInput?.value || 0);
   const file = fileInput?.files?.[0] || null;
   const isEn = document.documentElement.lang === 'en';
 
@@ -99,6 +137,22 @@ form?.addEventListener('submit', async (event) => {
     status.textContent = isEn
       ? 'Please fill in name, email and description.'
       : 'Bitte Name, E-Mail und Beschreibung ausfüllen.';
+    status.className = 'idea-status is-error';
+    ok.hidden = true;
+    return;
+  }
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    status.textContent = isEn
+      ? 'Enter how many prints you need (at least 1).'
+      : 'Bitte die Anzahl der Drucke angeben (mindestens 1).';
+    status.className = 'idea-status is-error';
+    ok.hidden = true;
+    return;
+  }
+  if (deadline && deadline < (deadlineInput?.min || tomorrowIsoDate())) {
+    status.textContent = isEn
+      ? 'Preferred deadline must be a future date.'
+      : 'Der Wunschtermin muss in der Zukunft liegen.';
     status.className = 'idea-status is-error';
     ok.hidden = true;
     return;
@@ -115,6 +169,7 @@ form?.addEventListener('submit', async (event) => {
     body.append('email', email);
     body.append('phone', phone);
     body.append('description', description);
+    body.append('quantity', String(quantity));
     if (deadline) body.append('deadline', deadline);
     if (file) body.append('reference', file, file.name);
 
@@ -123,6 +178,8 @@ form?.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(payload.error || (isEn ? 'Could not send.' : 'Senden fehlgeschlagen.'));
 
     form.reset();
+    if (quantityInput) quantityInput.value = '1';
+    applyDeadlineMin();
     updateFileLabel();
     status.textContent = '';
     ok.hidden = false;

@@ -66,8 +66,12 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
   const description = text(req.body?.description);
   const phone = text(req.body?.phone);
   const deadline = text(req.body?.deadline);
+  const quantity = Number(req.body?.quantity);
   if (!name || !validEmail(email) || !description) {
     return res.status(400).json({ error: 'Name, a valid email address, and a description are required.' });
+  }
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ error: 'Enter how many prints you need (at least 1).' });
   }
   if (deadline) {
     const tomorrow = new Date();
@@ -85,6 +89,7 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
     phone,
     description,
     deadline,
+    quantity,
     file: req.file
   }).catch(error => {
     console.error(`Order registry failed for idea: ${error.message}`);
@@ -93,10 +98,20 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
   const [adminResult, customerResult] = await Promise.allSettled([
     sendAdminEmail({
       subject: `3DNow design request from ${name}`,
-      lines: ['Type: Design service request', `Name: ${name}`, `Email: ${email}`, `Phone: ${phone || 'Not provided'}`, `Preferred deadline: ${deadline || 'Not provided'}`, '', 'Description:', description],
+      lines: [
+        'Type: Design service request',
+        `Name: ${name}`,
+        `Email: ${email}`,
+        `Phone: ${phone || 'Not provided'}`,
+        `Number of prints: ${quantity}`,
+        `Preferred deadline: ${deadline || 'Not provided'}`,
+        '',
+        'Description:',
+        description
+      ],
       files: [req.file]
     }),
-    sendCustomerIdeaConfirmation({ email, name, description, deadline })
+    sendCustomerIdeaConfirmation({ email, name, description, deadline, quantity })
   ]);
   if (adminResult.status === 'rejected') {
     console.error(`Design request notification failed: ${adminResult.reason.message}`);

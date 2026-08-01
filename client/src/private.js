@@ -103,8 +103,11 @@ function setRequestLabels() {
 }
 
 setRequestLabels();
+window.dispatchEvent(new Event('quote-engine:refresh-summary'));
 window.addEventListener('quote-engine:refresh-summary', () => {
-  document.querySelector('#summary-package').textContent = `${Number(document.querySelector('#private-quantity')?.value) || 1} pieces`;
+  document.querySelector('#summary-package')?.replaceChildren(
+    document.createTextNode(`${Number(document.querySelector('#private-quantity')?.value) || 1} pieces`)
+  );
 });
 
 document.addEventListener('click', async event => {
@@ -114,6 +117,7 @@ document.addEventListener('click', async event => {
   event.stopImmediatePropagation();
 
   const status = document.querySelector('#request-status');
+  if (!status) return;
   const contactMethod = selectedValue('#contact-options', 'contact', 'email');
   const contactEmail = document.querySelector('#contact-email')?.value.trim() || '';
   const contactPhone = document.querySelector('#contact-phone')?.value.trim() || '';
@@ -131,8 +135,9 @@ document.addEventListener('click', async event => {
     status.textContent = 'Enter the number of prints you need.';
     return;
   }
-  if (engineering !== 'review' && !document.querySelector('#private-disclaimer-ack')?.checked) {
-    status.textContent = 'Confirm the no Expert Review notice.';
+  if (!engineering && !document.querySelector('#private-disclaimer-ack')?.checked) {
+    status.textContent = 'Confirm the no Expert Review notice, or choose Expert Review / File Editing.';
+    document.querySelector('#private-disclaimer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
 

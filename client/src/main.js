@@ -415,9 +415,7 @@ function missingRequirements(values = requestValues()) {
     if (request.contact === 'email' && !values.contactEmail) missing.push('Add your email address');
     if (request.contact === 'phone' && !values.contactPhone) missing.push('Add your phone number');
     if (!Number.isInteger(quantity) || quantity < 1) missing.push('Enter the number of prints you need');
-    if (request.engineering !== 'review' && !state.privateDisclaimerAcknowledged) {
-      missing.push('Confirm the no Expert Review notice');
-    }
+    // Disclaimer is enforced on submit so the button stays clickable and can show guidance.
     return missing;
   }
   if (!state.quote) missing.push('Wait for your verified package quote');
@@ -451,7 +449,11 @@ function summaryHintText(values = requestValues()) {
         ? 'Ready to send your prototype quote request.'
         : 'Ready to send your production quote request.';
     }
-    if (privateFlow) return 'Ready to send your quote request.';
+    if (privateFlow) {
+      return !request.engineering && !state.privateDisclaimerAcknowledged
+        ? 'Confirm the no Expert Review notice, or choose Expert Review / File Editing.'
+        : 'Ready to send your quote request.';
+    }
     return 'Ready for secure payment.';
   }
   return missing.join(' · ');
@@ -484,7 +486,8 @@ function updateStudentEmailVerification(universityEmail) {
 function updatePrivateDisclaimer() {
   const disclaimer = $('#private-disclaimer');
   if (!disclaimer) return;
-  const show = privateFlow && Boolean(state.file) && request.engineering !== 'review';
+  // Only when no engineering option is chosen. Editing is support, so skip this notice.
+  const show = privateFlow && Boolean(state.file) && !request.engineering;
   disclaimer.hidden = !show;
   if (!show) {
     state.privateDisclaimerAcknowledged = false;

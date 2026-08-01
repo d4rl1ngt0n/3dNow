@@ -76,9 +76,15 @@
           <textarea id="idea-desc" name="description" required rows="5" data-en-ph="What should we create? Size, use, material wishes…" data-de-ph="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…" placeholder="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…"></textarea>
         </label>
 
-        <label class="field field-deadline"><span data-en="Preferred deadline" data-de="Wunschtermin">Wunschtermin</span>
-          <input id="idea-deadline" name="deadline" type="date"/>
-        </label>
+        <div class="field-row">
+          <label class="field"><span data-en="Number of prints" data-de="Anzahl der Drucke">Anzahl der Drucke</span>
+            <input id="idea-quantity" name="quantity" type="number" min="1" step="1" value="1" inputmode="numeric" required/>
+          </label>
+          <label class="field field-deadline"><span data-en="Preferred deadline" data-de="Wunschtermin">Wunschtermin</span>
+            <input id="idea-deadline" name="deadline" type="date"/>
+            <span class="quiet" data-en="Only future dates can be selected." data-de="Nur zukünftige Termine sind wählbar.">Nur zukünftige Termine sind wählbar.</span>
+          </label>
+        </div>
 
         <div class="fs-actions">
           <button class="btn btn-primary" id="idea-submit" type="submit" data-en="Send idea" data-de="Idee senden">Idee senden</button>
