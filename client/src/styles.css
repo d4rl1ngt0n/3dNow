@@ -864,6 +864,10 @@ body.embed-mode,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  align-items: start;
+}
+.idea-form .field-row > .field {
+  align-content: start;
 }
 .idea-form .field,
 .idea-form .field-label {
@@ -877,6 +881,8 @@ body.embed-mode,
 .idea-form input,
 .idea-form textarea {
   width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fff;
@@ -886,6 +892,10 @@ body.embed-mode,
   letter-spacing: normal;
   padding: 14px 16px;
   transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.idea-form input[type="number"],
+.idea-form input[type="date"] {
+  height: 52px;
 }
 .idea-form input:focus,
 .idea-form textarea:focus {
