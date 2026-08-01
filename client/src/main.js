@@ -520,7 +520,7 @@ function renderOrderSummary() {
     $('#summary-total').textContent = total != null ? euro(total) : 'Pending';
     $('#mobile-total').textContent = total != null ? euro(total) : 'Pending';
     $('#summary-subtitle').textContent = quote
-      ? (prototype ? 'Single prototype estimate (machine rate × 8)' : `Production estimate for ${quantity} pieces`)
+      ? (prototype ? 'Single prototype estimate' : `Production estimate for ${quantity} pieces`)
       : 'Upload a file to calculate your production estimate.';
     $('#summary-file').textContent = state.file?.name || 'Not uploaded';
     $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : 'Pending';

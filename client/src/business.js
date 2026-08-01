@@ -44,10 +44,10 @@ if (colourField && !document.querySelector('#quantity-field')) {
     <legend><span>04</span> Quantity</legend>
     <div class="option-grid option-grid-two" id="quantity-options">
       <button class="option-card" type="button" data-quantity-type="run" aria-pressed="false">
-        <span class="option-indicator"></span><span><strong>Production run</strong><small>From 10 pieces. Batch pricing applies.</small></span>
+        <span class="option-indicator"></span><span><strong>Production run</strong><small>Enter your target quantity below.</small></span>
       </button>
       <button class="option-card is-selected" type="button" data-quantity-type="prototype" aria-pressed="true">
-        <span class="option-indicator"></span><span><strong>Single prototype</strong><small>One sample at prototype rate (×8).</small></span>
+        <span class="option-indicator"></span><span><strong>Single prototype</strong><small>One sample to validate before a batch.</small></span>
       </button>
     </div>
     <label class="business-quantity-input" id="business-quantity-input">Number of prints needed<input id="business-quantity" type="number" min="1" value="1" inputmode="numeric"></label>
@@ -125,6 +125,8 @@ if (engineeringOptions) {
   }
   if (editing) {
     editing.querySelector('strong').textContent = 'File Editing & Optimization';
+    const vat = editing.querySelector('small');
+    if (vat) vat.textContent = 'plus 19% VAT';
     editing.querySelector('b').textContent = '€110/hour';
   }
 }
@@ -175,7 +177,7 @@ function renderEstimate() {
   document.querySelector('#summary-total').textContent = `€${total.toFixed(2)}`;
   document.querySelector('#mobile-total').textContent = `€${total.toFixed(2)}`;
   document.querySelector('#summary-subtitle').textContent = prototype
-    ? 'Single prototype estimate (machine rate × 8)'
+    ? 'Single prototype estimate'
     : `Production estimate for ${quantity} pieces`;
   document.querySelector('#summary-package').textContent = prototype ? '1 prototype' : `${quantity} pieces`;
   document.querySelector('#summary-hint').textContent = editingCost

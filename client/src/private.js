@@ -87,6 +87,8 @@ if (review) {
 }
 if (editing) {
   editing.querySelector('strong').textContent = 'File Editing & Optimization';
+  const vat = editing.querySelector('small');
+  if (vat) vat.textContent = 'plus 19% VAT';
   editing.querySelector('b').textContent = '€90/hour';
 }
 
