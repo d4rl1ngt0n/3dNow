@@ -51,6 +51,6 @@ test('adds selected business options to the production total', () => {
   });
   assert.equal(quote.productionTotal, 24);
   assert.equal(quote.speedCost, 59);
-  assert.equal(quote.editingCost, 110);
-  assert.equal(quote.total, 193);
+  assert.equal(quote.editingCost, 89);
+  assert.equal(quote.total, 172);
 });

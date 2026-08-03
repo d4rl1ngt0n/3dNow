@@ -43,7 +43,7 @@ test('allows file editing checkout at the first-hour rate', () => {
     baseCents: 3900,
     speedCents: 0,
     reviewCents: 0,
-    editingCents: 9000,
-    totalCents: 12900
+    editingCents: 8900,
+    totalCents: 12800
   });
 });

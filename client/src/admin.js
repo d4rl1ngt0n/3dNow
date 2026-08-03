@@ -308,6 +308,20 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function shortId(value) {
+  if (!value) return '';
+  const raw = String(value);
+  if (/^3DN\d+$/i.test(raw) || raw.length <= 12) return raw.toUpperCase();
+  return raw.replace(/-/g, '').slice(0, 8).toUpperCase();
+}
+
+function idMarkup(value) {
+  if (!value) return 'n/a';
+  const full = String(value);
+  const short = shortId(full);
+  return `<span class="mono" title="${escapeHtml(full)}">${escapeHtml(short)}</span>`;
+}
+
 function selectedOrder() {
   return state.orders.find(order => order.id === state.selectedId) || null;
 }
@@ -410,12 +424,15 @@ function packingLabelHtml(order) {
   const details = order.details || {};
   const payment = order.payment || {};
   const shipping = formatShipping(payment.shippingAddress);
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Packing label</title>
+  const orderNumber = shortId(order.id) || shortId(order.jobId) || 'n/a';
+  const shopifyRef = payment.shopifyOrderName || null;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Packing label ${escapeHtml(orderNumber)}</title>
 <style>body{font-family:system-ui,sans-serif;margin:24px}.box{border:2px solid #111;padding:16px;max-width:420px}.row{margin:8px 0}@media print{.noprint{display:none}}</style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <div class="box">
-  <h1>3DNow student print</h1>
-  <div class="row"><strong>${escapeHtml(payment.shopifyOrderName || 'n/a')}</strong></div>
+  <h1>3DNow</h1>
+  <div class="row"><strong style="font-size:1.4rem">${escapeHtml(orderNumber)}</strong></div>
+  ${shopifyRef ? `<div class="row">Shopify payment ref: ${escapeHtml(shopifyRef)}</div>` : ''}
   <div class="row">${escapeHtml(shipping)}</div>
   <div class="row">${escapeHtml(order.filename || 'n/a')} · ${escapeHtml(details.packageName || 'n/a')}</div>
   <div class="row">${escapeHtml(details.material || 'n/a')} · ${escapeHtml(payment.totalCents != null ? formatMoney(payment.totalCents) : 'n/a')}</div>
@@ -580,7 +597,7 @@ function renderInbox() {
           <button class="table-row ${item.id === state.selectedId && state.drawerOpen ? 'active' : ''}" type="button" data-order-id="${item.id}">
             <span>
               <div class="cell-title">${escapeHtml(item.summary || item.filename || typeLabel(item.type))}</div>
-              <div class="cell-sub">${escapeHtml(item.filename || item.jobId || item.id)}</div>
+              <div class="cell-sub">${escapeHtml(shortId(item.id) || shortId(item.jobId) || '')}${item.filename ? ` · ${escapeHtml(item.filename)}` : ''}</div>
             </span>
             <span class="cell-meta cell-hide-sm">${escapeHtml(item.customer?.email || item.customer?.phone || 'No contact')}</span>
             <span class="cell-meta">${escapeHtml(typeLabel(item.type))}</span>
@@ -664,19 +681,19 @@ function renderDrawer(order) {
     <div class="drawer-body">
       ${state.detailTab === 'overview' ? `
         <dl class="kv">
+          <dt>Order number</dt><dd>${idMarkup(order.id)}</dd>
           <dt>Created</dt><dd>${escapeHtml(formatDate(order.createdAt))}</dd>
           <dt>Customer</dt><dd>${escapeHtml(order.customer?.name || 'n/a')}</dd>
           <dt>Email</dt><dd>${escapeHtml(order.customer?.email || 'n/a')}</dd>
           <dt>Phone</dt><dd>${escapeHtml(order.customer?.phone || 'n/a')}</dd>
           <dt>Payment</dt><dd>${escapeHtml(payment.status || 'n/a')}${payment.totalCents != null ? ` · ${formatMoney(payment.totalCents)}` : ''}</dd>
-          <dt>Shopify</dt><dd>${payment.shopifyOrderName
+          <dt>Shopify payment</dt><dd>${payment.shopifyOrderName
             ? (shopifyUrl ? `<a href="${escapeHtml(shopifyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(payment.shopifyOrderName)}</a>` : escapeHtml(payment.shopifyOrderName))
             : escapeHtml(payment.shopifyDraftOrderId ? `Draft ${payment.shopifyDraftOrderId}` : 'n/a')}</dd>
           <dt>Shipping</dt><dd>${escapeHtml(formatShipping(payment.shippingAddress))}</dd>
           <dt>Package</dt><dd>${escapeHtml(details.packageName || order.quote?.package?.name || 'n/a')}</dd>
           <dt>Material</dt><dd>${escapeHtml(details.material || 'n/a')}</dd>
           <dt>File</dt><dd>${escapeHtml(order.filename || 'n/a')}</dd>
-          <dt>Job</dt><dd class="mono">${escapeHtml(order.jobId || 'n/a')}</dd>
         </dl>
         ${details.message || details.description || details.configuration ? `
           <div>

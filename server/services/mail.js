@@ -142,28 +142,46 @@ export async function sendAdminEmail({ subject, lines = [], files = [] }) {
   return sendEmail({ to: config.notifyTo, subject, lines, files, audience: 'admin' });
 }
 
-export async function sendCustomerOrderConfirmation({ email, filename, packageName, totalCents, shippingAddress }) {
+function orderNumberLine(orderNumber) {
+  return orderNumber ? `Your order number: ${orderNumber}` : '';
+}
+
+export async function sendCustomerOrderConfirmation({
+  email,
+  filename,
+  packageName,
+  totalCents,
+  shippingAddress,
+  orderNumber
+}) {
   return sendEmail({
     to: email,
-    subject: '3DNow payment confirmed for your student print',
+    subject: orderNumber
+      ? `3DNow payment confirmed · ${orderNumber}`
+      : '3DNow payment confirmed for your student print',
     lines: [
       'Thanks, your payment has been confirmed.',
+      orderNumberLine(orderNumber),
       `File: ${filename}`,
       `Package: ${packageName || 'Pending manual review'}`,
       `Amount paid: ${Number.isFinite(totalCents) ? `€${(totalCents / 100).toFixed(2)}` : 'Not available'}`,
       `Shipping address: ${shippingAddress || 'Not available'}`,
       '',
+      'Please keep your order number for any questions about this print.',
       'We will now review your file for production and contact you with the next steps.'
     ]
   });
 }
 
-export async function sendCustomerPrivateQuoteConfirmation({ email, filename }) {
+export async function sendCustomerPrivateQuoteConfirmation({ email, filename, orderNumber }) {
   return sendEmail({
     to: email,
-    subject: '3DNow received your quote request',
+    subject: orderNumber
+      ? `3DNow received your quote request · ${orderNumber}`
+      : '3DNow received your quote request',
     lines: [
       'Thanks, we received your private print quote request.',
+      orderNumberLine(orderNumber),
       `File: ${filename}`,
       '',
       'We will review your file and chosen options, then email your quote. Payment is only requested after you approve it.',
@@ -173,12 +191,15 @@ export async function sendCustomerPrivateQuoteConfirmation({ email, filename }) 
   });
 }
 
-export async function sendCustomerBusinessQuoteConfirmation({ email, filename, totalFormatted }) {
+export async function sendCustomerBusinessQuoteConfirmation({ email, filename, totalFormatted, orderNumber }) {
   return sendEmail({
     to: email,
-    subject: '3DNow received your business quote request',
+    subject: orderNumber
+      ? `3DNow received your business quote request · ${orderNumber}`
+      : '3DNow received your business quote request',
     lines: [
       'Thanks, we received your production request.',
+      orderNumberLine(orderNumber),
       `File: ${filename}`,
       `Estimated production price: ${totalFormatted || 'Pending review'}`,
       '',
@@ -189,14 +210,24 @@ export async function sendCustomerBusinessQuoteConfirmation({ email, filename, t
   });
 }
 
-export async function sendCustomerIdeaConfirmation({ email, name, description, deadline, quantity }) {
+export async function sendCustomerIdeaConfirmation({
+  email,
+  name,
+  description,
+  deadline,
+  quantity,
+  orderNumber
+}) {
   return sendEmail({
     to: email,
-    subject: '3DNow received your design request',
+    subject: orderNumber
+      ? `3DNow received your design request · ${orderNumber}`
+      : '3DNow received your design request',
     lines: [
       `Hi ${name},`,
       '',
       'Thanks for sending your idea. We have received your request and will review it before contacting you with the next steps.',
+      orderNumberLine(orderNumber),
       '',
       'Your request:',
       description,
@@ -208,29 +239,35 @@ export async function sendCustomerIdeaConfirmation({ email, name, description, d
   });
 }
 
-export async function sendCustomerContactConfirmation({ email, name }) {
+export async function sendCustomerContactConfirmation({ email, name, orderNumber }) {
   return sendEmail({
     to: email,
-    subject: '3DNow received your message',
+    subject: orderNumber
+      ? `3DNow received your message · ${orderNumber}`
+      : '3DNow received your message',
     lines: [
       `Hi ${name},`,
       '',
       'Thanks for contacting 3DNow. We have received your message and will reply as soon as possible.',
+      orderNumberLine(orderNumber),
       '',
       '3DNow'
     ]
   });
 }
 
-export async function sendCustomerStatusUpdate({ email, name, statusLabel, message, filename }) {
+export async function sendCustomerStatusUpdate({ email, name, statusLabel, message, filename, orderNumber }) {
   const greeting = name ? `Hi ${name},` : 'Hi,';
   return sendEmail({
     to: email,
-    subject: `3DNow update: ${statusLabel}`,
+    subject: orderNumber
+      ? `3DNow update: ${statusLabel} · ${orderNumber}`
+      : `3DNow update: ${statusLabel}`,
     lines: [
       greeting,
       '',
       message,
+      orderNumberLine(orderNumber),
       filename ? `File: ${filename}` : '',
       '',
       'If you have questions, reply to this email or contact us via 3d-now.de.',

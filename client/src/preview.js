@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { setToolpathOrbitMode } from './toolpath-mesh.js';
 
 function hslLightness(hex) {
   return new THREE.Color(hex).getHSL({}).l;
@@ -26,12 +27,15 @@ export function createFilamentMaterial(color) {
 export function applyPreviewColor(object, color) {
   if (!object) return;
   const material = createFilamentMaterial(color);
+  const disposed = new Set();
   object.traverse(node => {
     if (node.userData?.isPlatePreview) return;
-    if (node.userData?.isSolidToolpath || node.isMesh) {
-      if (node.material) node.material.dispose();
-      node.material = material;
+    if (!(node.userData?.isSolidToolpath || node.isMesh) || !node.isMesh) return;
+    if (node.material && !disposed.has(node.material)) {
+      disposed.add(node.material);
+      node.material.dispose();
     }
+    node.material = material;
   });
 }
 
@@ -86,7 +90,9 @@ function refreshObjectBounds(object) {
     if (node.isInstancedMesh) {
       if (!node.boundingBox || node.boundingBox.isEmpty()) node.computeBoundingBox();
       if (!node.boundingSphere) node.computeBoundingSphere();
-      node.frustumCulled = false;
+      // Bounds are precomputed for toolpaths; keep culling on so off-screen
+      // instance clouds are skipped during orbit instead of drawn every frame.
+      node.frustumCulled = true;
       return;
     }
     if (node.isMesh && node.geometry && node.geometry.boundingBox == null) {
@@ -100,6 +106,7 @@ function objectBounds(object) {
   const box = new THREE.Box3();
   let found = false;
   object.traverse(node => {
+    if (node.isInstancedMesh && node.userData?.isOrbitProxy) return;
     if (node.isInstancedMesh && node.boundingBox && !node.boundingBox.isEmpty()) {
       const world = node.boundingBox.clone().applyMatrix4(node.matrixWorld);
       if (found) box.union(world);
@@ -146,45 +153,45 @@ export function preparePrintPreview(object, { layFlat = false } = {}) {
 
 function createPlateTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
+  canvas.width = 256;
+  canvas.height = 256;
   const context = canvas.getContext('2d');
   context.fillStyle = '#2a3036';
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.strokeStyle = 'rgba(230, 236, 241, 0.13)';
   context.lineWidth = 1;
 
-  for (let position = 0; position <= 512; position += 32) {
+  for (let position = 0; position <= 256; position += 16) {
     context.beginPath();
     context.moveTo(position, 0);
-    context.lineTo(position, 512);
+    context.lineTo(position, 256);
     context.moveTo(0, position);
-    context.lineTo(512, position);
+    context.lineTo(256, position);
     context.stroke();
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 1;
   return texture;
 }
 
 function createPlateMarkTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 256;
+  canvas.width = 512;
+  canvas.height = 128;
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.font = '700 152px -apple-system, BlinkMacSystemFont, sans-serif';
+  context.font = '700 76px -apple-system, BlinkMacSystemFont, sans-serif';
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   context.fillStyle = 'rgba(238, 242, 245, 0.72)';
-  context.fillText('3D', 390, canvas.height / 2 + 4);
+  context.fillText('3D', 195, canvas.height / 2 + 2);
   context.fillStyle = 'rgba(99, 222, 104, 0.92)';
-  context.fillText('NOW', 675, canvas.height / 2 + 4);
+  context.fillText('NOW', 338, canvas.height / 2 + 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 1;
   return texture;
 }
 
@@ -196,31 +203,24 @@ function createBed(scene, printer = { name: 'P1S', volume: { x: 256, y: 256 } })
   bed.name = `${name} build plate`;
   scene.add(bed);
 
+  // Lambert/Basic — Standard + soft shadows were freezing orbit on dense toolpaths.
   const frame = new THREE.Mesh(
     new THREE.BoxGeometry(width + 8, 3.5, depth + 8),
-    new THREE.MeshStandardMaterial({
-      color: '#7f8a92',
-      roughness: 0.42,
-      metalness: 0.54
-    })
+    new THREE.MeshLambertMaterial({ color: '#7f8a92' })
   );
   frame.position.y = -1.8;
-  frame.receiveShadow = true;
   bed.add(frame);
 
   const plate = new THREE.Mesh(
     new THREE.PlaneGeometry(width, depth),
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshLambertMaterial({
       color: '#ffffff',
-      map: createPlateTexture(),
-      roughness: 0.77,
-      metalness: 0.12
+      map: createPlateTexture()
     })
   );
   plate.rotation.x = -Math.PI / 2;
   plate.position.y = 0.02;
   plate.name = `${name} ${width} × ${depth} mm build plate`;
-  plate.receiveShadow = true;
   bed.add(plate);
 
   const gridSize = Math.max(width, depth);
@@ -229,6 +229,7 @@ function createBed(scene, printer = { name: 'P1S', volume: { x: 256, y: 256 } })
   grid.material.opacity = 0.28;
   grid.material.transparent = true;
   grid.position.y = 0.04;
+  grid.userData.bedChrome = true;
   bed.add(grid);
 
   const border = new THREE.LineSegments(
@@ -236,6 +237,7 @@ function createBed(scene, printer = { name: 'P1S', volume: { x: 256, y: 256 } })
     new THREE.LineBasicMaterial({ color: 0xe1e7eb, transparent: true, opacity: 0.58 })
   );
   border.position.y = 0.08;
+  border.userData.bedChrome = true;
   bed.add(border);
 
   const plateMark = new THREE.Mesh(
@@ -249,6 +251,7 @@ function createBed(scene, printer = { name: 'P1S', volume: { x: 256, y: 256 } })
   plateMark.rotation.x = -Math.PI / 2;
   plateMark.position.set(0, 0.09, depth / 2 - 26);
   plateMark.name = '3DNOW build plate mark';
+  plateMark.userData.bedChrome = true;
   bed.add(plateMark);
 
   return bed;
@@ -274,6 +277,13 @@ export class Preview {
     this.lastWidth = 0;
     this.lastHeight = 0;
     this.raf = 0;
+    this.fastQuality = false;
+    this.prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+    this.onReducedMotionChange = () => {
+      this.prefersReducedMotion = this.reducedMotionQuery.matches;
+    };
+    this.reducedMotionQuery.addEventListener?.('change', this.onReducedMotionChange);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#e9eef2');
@@ -282,45 +292,39 @@ export class Preview {
     this.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
     this.camera.position.set(160, 120, 160);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' });
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 720 ? 1.1 : 1.5));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.toneMappingExposure = 1;
+    this.fullPixelRatio = Math.min(devicePixelRatio, 1);
+    this.renderer.setPixelRatio(this.fullPixelRatio);
+    this.renderer.shadowMap.enabled = false;
     host.append(this.renderer.domElement);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
+    this.controls.dampingFactor = 0.14;
     this.controls.minDistance = 20;
     this.controls.maxDistance = 1200;
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.addEventListener('start', () => {
       this.interacting = true;
+      this.setFastQuality(true);
       this.markDirty();
     });
     this.controls.addEventListener('end', () => {
       this.interacting = false;
-      this.dampingUntil = performance.now() + 450;
+      this.dampingUntil = performance.now() + 160;
       this.markDirty();
     });
     this.controls.addEventListener('change', () => this.markDirty());
 
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xdce3ea, 1.25));
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xdce3ea, 1.35));
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.45);
+    const key = new THREE.DirectionalLight(0xffffff, 1.35);
     key.position.set(110, 190, 95);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.near = 10;
-    key.shadow.camera.far = 500;
-    key.shadow.camera.left = -150;
-    key.shadow.camera.right = 150;
-    key.shadow.camera.top = 150;
-    key.shadow.camera.bottom = -150;
-    key.shadow.bias = -0.00015;
+    key.castShadow = false;
+    this.keyLight = key;
     this.scene.add(key);
 
     const fill = new THREE.DirectionalLight(0xf7fbff, 0.62);
@@ -351,12 +355,29 @@ export class Preview {
     if (!this.raf && !this.destroyed) this.animate();
   }
 
+  /** Swap to sparse toolpath + hide bed chrome while orbiting. */
+  setFastQuality(fast) {
+    if (this.fastQuality === fast) return;
+    this.fastQuality = fast;
+    setToolpathOrbitMode(this.object, fast);
+    this.bed?.traverse(node => {
+      if (node.userData?.bedChrome) node.visible = !fast;
+    });
+    if (this.scene.fog) {
+      if (this.fogFarFull == null) this.fogFarFull = this.scene.fog.far;
+      this.scene.fog.far = fast
+        ? Math.max(this.scene.fog.near + 80, this.fogFarFull * 0.55)
+        : this.fogFarFull;
+    }
+  }
+
   set(object, { showBed = true } = {}) {
     this.clear();
     this.object = object;
     this.showBed = showBed;
     this.bed.visible = showBed;
     this.scene.add(object);
+    setToolpathOrbitMode(object, false);
     this.setColor(this.color);
     this.fit();
   }
@@ -380,13 +401,23 @@ export class Preview {
 
   clear() {
     if (!this.object) return;
+    setToolpathOrbitMode(this.object, false);
     this.scene.remove(this.object);
+    const disposedGeo = new Set();
+    const disposedMat = new Set();
     this.object.traverse(node => {
-      node.geometry?.dispose();
-      if (node.material) {
-        if (Array.isArray(node.material)) node.material.forEach(material => material.dispose());
-        else node.material.dispose();
+      if (node.geometry && !disposedGeo.has(node.geometry)) {
+        disposedGeo.add(node.geometry);
+        node.geometry.dispose();
       }
+      const materials = node.material
+        ? (Array.isArray(node.material) ? node.material : [node.material])
+        : [];
+      materials.forEach(material => {
+        if (!material || disposedMat.has(material)) return;
+        disposedMat.add(material);
+        material.dispose();
+      });
     });
     this.object = null;
   }
@@ -421,6 +452,7 @@ export class Preview {
     if (this.scene.fog) {
       this.scene.fog.near = Math.max(distance * 2.4, radius * 4);
       this.scene.fog.far = Math.max(distance * 6, radius * 12);
+      this.fogFarFull = this.scene.fog.far;
     }
     this.controls.update();
     this.markDirty();
@@ -436,9 +468,15 @@ export class Preview {
       this.raf = 0;
       if (this.destroyed) return;
 
-      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const reduced = this.prefersReducedMotion;
       const settling = performance.now() < this.dampingUntil;
       const keepAlive = this.inView && !reduced && (this.controls.autoRotate || this.interacting || settling);
+      const wantFast = this.interacting || settling;
+      const wasFast = this.fastQuality;
+
+      // Keep the cheap path through damping settle; restore full quality once idle.
+      this.setFastQuality(wantFast);
+      if (wasFast && !wantFast) this.dirty = true;
 
       if (this.inView && (this.dirty || keepAlive)) {
         this.controls.update();
@@ -467,6 +505,7 @@ export class Preview {
   dispose() {
     this.destroyed = true;
     if (this.raf) cancelAnimationFrame(this.raf);
+    this.reducedMotionQuery.removeEventListener?.('change', this.onReducedMotionChange);
     this.resize.disconnect();
     this.visibility.disconnect();
     this.clear();

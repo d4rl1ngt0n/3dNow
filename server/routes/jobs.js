@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { next3dnId } from '../utils/ids.js';
 import { config } from '../config.js';
 import { jobStore } from '../services/job-store.js';
 import { parseGcode } from '../services/gcode.js';
@@ -101,7 +101,8 @@ function applyGcode(job, parsed, source) {
         material: job.material,
         weightG: metrics.weightG,
         printTimeSec: metrics.printTimeSec,
-        printer: routed
+        printer: routed,
+        quantity: job.quantity || 1
       });
     }
   } else if (!parsed.confidence) {
@@ -142,7 +143,8 @@ async function sliceAndQuote(job, route) {
           material: job.material,
           weightG: job.metrics.weightG,
           printTimeSec: job.metrics.printTimeSec,
-          printer: job.metrics.printer
+          printer: job.metrics.printer,
+          quantity: job.quantity || 1
         })
         : null;
     job.status = job.quote ? 'ready' : 'manual-review';
@@ -288,7 +290,7 @@ jobsRouter.post('/', upload.single('file'), async (req, res) => {
   await fs.rename(req.file.path, stampedPath);
   req.file.path = stampedPath;
   const job = {
-    id: randomUUID(),
+    id: await next3dnId(),
     filename: req.file.originalname,
     format,
     filePath: stampedPath,
@@ -461,9 +463,9 @@ jobsRouter.post('/:jobId/business-quote-request', async (req, res) => {
   };
   try {
     await sendAdminEmail({
-      subject: `3DNow business quote request: ${job.filename}`,
+      subject: `3DNow ${job.id} · business quote · ${job.filename}`,
       lines: [
-        `Job ID: ${job.id}`,
+        `Order number: ${job.id}`,
         `File: ${job.filename}`,
         `Quantity: ${job.quote.quantity}`,
         `Printer: ${job.quote.printer.name}`,
@@ -487,12 +489,17 @@ jobsRouter.post('/:jobId/business-quote-request', async (req, res) => {
       files: [job.upload]
     });
     if (contactMethod === 'email') {
-      await sendCustomerBusinessQuoteConfirmation({ email: contact, filename: job.filename, totalFormatted: job.quote.totalFormatted });
+      await sendCustomerBusinessQuoteConfirmation({
+        email: contact,
+        filename: job.filename,
+        totalFormatted: job.quote.totalFormatted,
+        orderNumber: job.id
+      });
     }
     await registerBusinessQuote(job).catch(error => {
       console.error(`Order registry failed for business quote: ${error.message}`);
     });
-    return res.status(201).json({ message: 'Business quote request received.' });
+    return res.status(201).json({ message: 'Business quote request received.', orderNumber: job.id });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Could not send business quote request.' });
   }
@@ -528,9 +535,9 @@ jobsRouter.post('/:jobId/private-quote-request', async (req, res) => {
 
   try {
     await sendAdminEmail({
-      subject: `3DNow private quote request: ${job.filename}`,
+      subject: `3DNow ${job.id} · private quote · ${job.filename}`,
       lines: [
-        `Job ID: ${job.id}`,
+        `Order number: ${job.id}`,
         `File: ${job.filename}`,
         `Material: ${job.privateQuoteRequest.material}`,
         `Colour: ${job.privateQuoteRequest.color}`,
@@ -545,12 +552,12 @@ jobsRouter.post('/:jobId/private-quote-request', async (req, res) => {
       files: [job.upload]
     });
     if (contactMethod === 'email') {
-      await sendCustomerPrivateQuoteConfirmation({ email: contact, filename: job.filename });
+      await sendCustomerPrivateQuoteConfirmation({ email: contact, filename: job.filename, orderNumber: job.id });
     }
     await registerPrivateQuote(job).catch(error => {
       console.error(`Order registry failed for private quote: ${error.message}`);
     });
-    return res.status(201).json({ message: 'Quote request received.' });
+    return res.status(201).json({ message: 'Quote request received.', orderNumber: job.id });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Could not send quote request.' });
   }
@@ -593,7 +600,7 @@ jobsRouter.post('/:jobId/checkout-session', orderUpload.single('studentId'), asy
     await registerCheckoutPending(job).catch(error => {
       console.error(`Order registry failed for checkout: ${error.message}`);
     });
-    return res.status(201).json({ sessionId: checkout.id, url: checkout.url });
+    return res.status(201).json({ sessionId: checkout.id, url: checkout.url, orderNumber: job.id });
   } catch (error) {
     return res.status(400).json({ error: error.message || 'Could not start checkout.' });
   }

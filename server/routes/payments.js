@@ -17,9 +17,9 @@ async function notifyPaidOrder(job, session) {
   const customerEmail = session.customer_details?.email || details.contactEmail;
 
   const lines = [
-    `Job ID: ${job.id}`,
+    `Order number: ${job.id}`,
     `Payment status: paid`,
-    `Stripe session: ${session.id}`,
+    `Stripe payment ref: ${session.id}`,
     `File: ${job.filename}`,
     `Package: ${details.packageName || job.quote?.package?.name || 'Manual review'}`,
     `Amount paid: €${((session.amount_total || 0) / 100).toFixed(2)}`,
@@ -34,7 +34,7 @@ async function notifyPaidOrder(job, session) {
   ];
 
   await sendAdminEmail({
-    subject: `3DNow paid student print order: ${job.filename}`,
+    subject: `3DNow ${job.id} · paid student print · ${job.filename}`,
     lines,
     files: [job.upload, job.studentIdFile]
   });
@@ -45,7 +45,8 @@ async function notifyPaidOrder(job, session) {
       filename: job.filename,
       packageName: details.packageName || job.quote?.package?.name,
       totalCents: session.amount_total,
-      shippingAddress
+      shippingAddress,
+      orderNumber: job.id
     });
   }
 }

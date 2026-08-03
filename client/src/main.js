@@ -8,6 +8,14 @@ import { state } from './state.js';
 import { analyzeGeometry } from './analyzer.js';
 import { Preview, setPreviewColor, createFilamentMaterial, preparePrintPreview } from './preview.js';
 import { buildSolidToolpathMesh } from './toolpath-mesh.js';
+import {
+  applyLangAttributes,
+  bindLangSwitch,
+  getLang,
+  persistLang,
+  readStoredLang,
+  t
+} from './lang.js';
 import './styles.css';
 
 const TERMINAL_JOB = new Set(['ready', 'manual-review', 'error']);
@@ -23,6 +31,17 @@ if (embedMode) {
   });
 }
 
+(function syncVisualViewport() {
+  function apply() {
+    const h = window.visualViewport?.height || window.innerHeight || 0;
+    if (h > 0) document.documentElement.style.setProperty('--vvh', `${h * 0.01}px`);
+  }
+  apply();
+  window.addEventListener('resize', apply);
+  window.visualViewport?.addEventListener('resize', apply);
+  window.visualViewport?.addEventListener('scroll', apply);
+})();
+
 if (window.location.pathname === '/quote-engine-business') {
   void import('./business.js');
 }
@@ -31,7 +50,18 @@ if (window.location.pathname === '/quote-engine-private') {
 }
 
 const $ = selector => document.querySelector(selector);
-const colors = [['Black','#141417'],['White','#FFFFFF'],['Red','#D7263D'],['Orange','#F26419'],['Green','#2E933C'],['Pink','#E86A92'],['Bio beige','#CDBA94'],['Neon green','#B6F400'],['Neon yellow','#EEFF00'],['Blue','#1F6FEB']];
+const colors = [
+  ['Black', 'Schwarz', '#141417'],
+  ['White', 'Weiß', '#FFFFFF'],
+  ['Red', 'Rot', '#D7263D'],
+  ['Orange', 'Orange', '#F26419'],
+  ['Green', 'Grün', '#2E933C'],
+  ['Pink', 'Pink', '#E86A92'],
+  ['Bio beige', 'Bio-Beige', '#CDBA94'],
+  ['Neon green', 'Neongrün', '#B6F400'],
+  ['Neon yellow', 'Neongelb', '#EEFF00'],
+  ['Blue', 'Blau', '#1F6FEB']
+];
 const request = { engineering: null, speed: 'standard', verification: null, contact: 'email' };
 const businessFlow = window.location.pathname === '/quote-engine-business';
 const privateFlow = window.location.pathname === '/quote-engine-private';
@@ -42,7 +72,13 @@ if (!studentFlow) {
   const verificationField = $('#verification-options')?.closest('fieldset');
   if (verificationField) verificationField.hidden = true;
   document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
-    button.textContent = businessFlow ? 'Request prototype quote' : 'Request quote';
+    if (businessFlow) {
+      button.setAttribute('data-en', 'Request prototype quote');
+      button.setAttribute('data-de', 'Prototyp-Angebot anfragen');
+    } else {
+      button.setAttribute('data-en', 'Request quote');
+      button.setAttribute('data-de', 'Angebot anfragen');
+    }
   });
 }
 state.preview = new Preview($('#preview'));
@@ -58,7 +94,7 @@ function displayMaterial() {
 function displayColor() {
   const custom = state.customColor.trim();
   if (custom) return custom;
-  return colors.find(([, value]) => value === state.color)?.[0] || 'White';
+  return colors.find(([, , value]) => value === state.color)?.[getLang() === 'de' ? 1 : 0] || t('White', 'Weiß');
 }
 
 function updateMaterialChips(selected = state.material) {
@@ -196,19 +232,27 @@ function chooseColor(value) {
   setPreviewColor(state.modalPreview, value);
 }
 
-for (const [name, value] of colors) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'swatch';
-  button.title = name;
-  button.dataset.color = value;
-  button.style.background = value;
-  button.setAttribute('aria-label', name);
-  button.setAttribute('aria-pressed', 'false');
-  button.onclick = () => chooseColor(value);
-  $('#colors').append(button);
+function renderColorSwatches() {
+  const host = $('#colors');
+  if (!host) return;
+  host.replaceChildren();
+  for (const [en, de, value] of colors) {
+    const label = getLang() === 'de' ? de : en;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'swatch';
+    button.title = label;
+    button.dataset.color = value;
+    button.style.background = value;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('aria-pressed', 'false');
+    button.onclick = () => chooseColor(value);
+    host.append(button);
+  }
+  updateSwatchSelection(state.color);
 }
 
+renderColorSwatches();
 chooseColor(state.color);
 updateMaterialChips();
 
@@ -292,12 +336,52 @@ function customerReviewMessage(warning) {
 const packagePrices = { Basic: 39, Medium: 69, Large: 89 };
 const packageRank = { Basic: 0, Medium: 1, Large: 2 };
 
+function studentQuantity() {
+  const value = Number($('#student-quantity')?.value);
+  return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
+function fileWeightG() {
+  const weight = Number(state.metrics?.weightG ?? state.quote?.weightG);
+  return Number.isFinite(weight) ? weight : null;
+}
+
+function totalPrintWeightG() {
+  const weight = fileWeightG();
+  return weight == null ? null : weight * studentQuantity();
+}
+
+function packageFromTotalWeight(totalWeightG) {
+  if (!Number.isFinite(totalWeightG)) return null;
+  if (totalWeightG <= 150) return 'Basic';
+  if (totalWeightG <= 300) return 'Medium';
+  return 'Large';
+}
+
+function refreshStudentTotalWeight() {
+  const node = $('#student-total-weight');
+  if (!node) return;
+  const file = fileWeightG();
+  const qty = studentQuantity();
+  const total = totalPrintWeightG();
+  if (file == null || total == null) {
+    node.textContent = t('Total weight: pending', 'Gesamtgewicht: ausstehend');
+    return;
+  }
+  node.textContent = t(
+    `Total weight: ${total.toFixed(0)} g (${file.toFixed(0)} g × ${qty})`,
+    `Gesamtgewicht: ${total.toFixed(0)} g (${file.toFixed(0)} g × ${qty})`
+  );
+}
+
 function updatePackageSelection(packageName) {
   const section = $('#package-options');
-  if (packageName) {
-    state.minimumPackage = packageName;
-    if (!state.packageManuallySelected || packageRank[state.packageSelection] < packageRank[packageName]) {
-      state.packageSelection = packageName;
+  const fromTotal = packageFromTotalWeight(totalPrintWeightG());
+  const resolvedPackage = packageName || fromTotal;
+  if (resolvedPackage) {
+    state.minimumPackage = resolvedPackage;
+    if (!state.packageManuallySelected || packageRank[state.packageSelection] < packageRank[resolvedPackage]) {
+      state.packageSelection = resolvedPackage;
     }
   }
   const minimumPackage = state.minimumPackage;
@@ -313,14 +397,23 @@ function updatePackageSelection(packageName) {
   const reviewCard = $('#engineering-options [data-engineering="review"]');
   const expertReviewIncluded = packageRank[state.packageSelection] >= packageRank.Medium;
   if (reviewCard) {
-    reviewCard.querySelector('b').textContent = expertReviewIncluded ? 'Included' : '+€15';
+    reviewCard.querySelector('b').textContent = expertReviewIncluded
+      ? t('Included', 'Inklusive')
+      : '+€15';
     reviewCard.classList.toggle('is-included', expertReviewIncluded);
   }
+  refreshStudentTotalWeight();
   $('#package-note').textContent = minimumPackage
-    ? `Your ${minimumPackage} package was selected from the verified file weight. You can upgrade to any higher package, which includes Expert Review.`
+    ? t(
+      `Your ${minimumPackage} package was selected from total weight (file × prints). You can upgrade to any higher package, which includes Expert Review.`,
+      `Dein ${minimumPackage}-Paket wurde aus dem Gesamtgewicht (Datei × Drucke) gewählt. Du kannst auf ein höheres Paket mit Expertenprüfung upgraden.`
+    )
     : state.file
-      ? 'Verifying your file weight to select the minimum eligible package.'
-      : 'Select a package to explore prices. Your minimum package will be set automatically from the verified file weight.';
+      ? t('Verifying your file weight to select the minimum eligible package.', 'Datei-Gewicht wird geprüft, um das Mindestpaket zu wählen.')
+      : t(
+        'Your package is set automatically from file weight × number of prints. You can upgrade to a higher package.',
+        'Dein Paket wird automatisch aus Dateigewicht × Anzahl der Drucke gesetzt. Du kannst auf ein höheres Paket upgraden.'
+      );
   section.dataset.locked = String(Boolean(minimumPackage));
   updateBasicDisclaimer();
 }
@@ -351,7 +444,7 @@ function drawMetrics(metrics, quote) {
   } else {
     $('#metric-note').textContent = 'Geometry analysis is informational. Exact pricing requires verified sliced metadata.';
   }
-  if (studentFlow) updatePackageSelection(quote?.package?.name);
+  if (studentFlow) updatePackageSelection(packageFromTotalWeight(totalPrintWeightG()) || quote?.package?.name);
   $('#results').hidden = false;
   $('#request-options').hidden = false;
   $('#mobile-checkout').hidden = false;
@@ -366,6 +459,15 @@ document.querySelectorAll('.package-card').forEach(card => {
     updatePackageSelection();
     renderOrderSummary();
   });
+});
+$('#student-quantity')?.addEventListener('input', () => {
+  if (!studentFlow) return;
+  const input = $('#student-quantity');
+  const qty = Number(input?.value);
+  if (input) input.setCustomValidity(!Number.isInteger(qty) || qty < 1 ? t('Enter at least one print.', 'Mindestens einen Druck angeben.') : '');
+  state.packageManuallySelected = false;
+  updatePackageSelection();
+  renderOrderSummary();
 });
 updatePackageSelection();
 
@@ -415,7 +517,6 @@ function missingRequirements(values = requestValues()) {
     if (request.contact === 'email' && !values.contactEmail) missing.push('Add your email address');
     if (request.contact === 'phone' && !values.contactPhone) missing.push('Add your phone number');
     if (!Number.isInteger(quantity) || quantity < 1) missing.push('Enter the number of prints you need');
-    // Disclaimer is enforced on submit so the button stays clickable and can show guidance.
     return missing;
   }
   if (!state.quote) missing.push('Wait for your verified package quote');
@@ -445,16 +546,35 @@ function summaryHintText(values = requestValues()) {
   const missing = missingRequirements(values);
   if (!missing.length) {
     if (businessFlow) {
+      const quantity = Number($('#business-quantity')?.value) || 1;
       return quantity === 1
-        ? 'Ready to send your prototype quote request.'
-        : 'Ready to send your production quote request.';
+        ? t('Ready to send your prototype quote request.', 'Bereit, deine Prototyp-Anfrage zu senden.')
+        : t('Ready to send your production quote request.', 'Bereit, deine Produktionsanfrage zu senden.');
     }
     if (privateFlow) {
-      return !request.engineering && !state.privateDisclaimerAcknowledged
-        ? 'Confirm the no Expert Review notice, or choose Expert Review / File Editing.'
-        : 'Ready to send your quote request.';
+      return t('Ready to send your quote request.', 'Bereit, deine Preisanfrage zu senden.');
     }
-    return 'Ready for secure payment.';
+    return t('Ready for secure payment.', 'Bereit für die sichere Zahlung.');
+  }
+  if (studentFlow) {
+    if (!request.verification) {
+      return t(
+        'Enter your university email address · Add your email address',
+        'Gib deine Hochschul-E-Mail-Adresse ein · Füge deine E-Mail-Adresse hinzu'
+      );
+    }
+    if (request.verification === 'email' && !values.universityEmail) {
+      return t('Enter your university email address', 'Gib deine Hochschul-E-Mail-Adresse ein');
+    }
+    if (request.contact === 'email' && !values.contactEmail) {
+      return t('Add your email address', 'Füge deine E-Mail-Adresse hinzu');
+    }
+    if (request.contact === 'phone' && !values.contactPhone) {
+      return t('Add your email or phone number to continue.', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
+    }
+  }
+  if ((businessFlow || privateFlow) && missing.some(item => /email|phone/i.test(item))) {
+    return t('Add your email or phone number to continue.', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
   }
   return missing.join(' · ');
 }
@@ -545,20 +665,17 @@ function renderOrderSummary() {
   }
   if (privateFlow) {
     const quantity = Number($('#private-quantity')?.value) || 1;
-    const engineering = request.engineering === 'review' ? 'Expert Review · +€35' : request.engineering === 'editing' ? 'Editing · €90/hour' : 'Not selected';
-    $('#summary-total').textContent = 'Quote after review';
-    $('#mobile-total').textContent = 'Quote request';
+    $('#summary-total').textContent = t('Quote after review', 'Angebot nach Prüfung');
+    $('#mobile-total').textContent = t('Quote request', 'Preisanfrage');
     $('#summary-subtitle').textContent = state.file
-      ? 'We will review your file and email you a price. No payment here.'
-      : 'Upload a file to request your quote.';
-    $('#summary-file').textContent = state.file?.name || 'Not uploaded';
-    $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : 'Pending';
+      ? t('We will review your file and email you a price. No payment here.', 'Wir prüfen deine Datei und schicken dir einen Preis. Hier wird nicht bezahlt.')
+      : t('Upload a file to request your quote.', 'Lade eine Datei hoch, um deinen Preis anzufragen.');
+    $('#summary-file').textContent = state.file?.name || t('Not uploaded', 'Nicht hochgeladen');
+    $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : t('Pending', 'Ausstehend');
     $('#summary-package').textContent = `${quantity} pieces`;
     $('#summary-material').textContent = displayMaterial();
-    $('#summary-speed').textContent = request.speed === 'priority' ? 'Priority · 2-3 days' : request.speed === 'express' ? 'Express · 4-6 days' : 'Standard · 7-10 days';
-    $('#summary-engineering').textContent = engineering;
     document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
-      button.textContent = 'Request quote';
+      button.textContent = t('Request your price', 'Preis anfragen');
     });
     $('#summary-checkout').disabled = !ready;
     $('#mobile-checkout-button').disabled = !ready;
@@ -570,30 +687,36 @@ function renderOrderSummary() {
   const expertReviewIncluded = packageRank[state.packageSelection] >= packageRank.Medium;
   const reviewCost = request.engineering === 'review' && !expertReviewIncluded ? 15 : 0;
   const editingSelected = request.engineering === 'editing';
-  const editingCost = editingSelected && studentFlow ? 90 : 0;
+  const editingCost = editingSelected && studentFlow ? 89 : 0;
   const total = base + speedCost + reviewCost + editingCost;
-  const speed = privateFlow
-    ? (request.speed === 'priority' ? 'Priority · 2-3 days' : request.speed === 'express' ? 'Express · 4-6 days' : 'Standard · 7-10 days')
-    : (request.speed === 'priority' ? 'Priority · 1-2 days' : request.speed === 'express' ? 'Express · 3-5 days' : 'Standard · 8-10 days');
-  const engineering = privateFlow
-    ? (request.engineering === 'review' ? 'Expert Review · +€35' : editingSelected ? 'Editing · €90/hour' : 'Not selected')
-    : (editingSelected ? 'Editing · €90 first hour' : expertReviewIncluded ? 'Expert Review included' : request.engineering === 'review' ? 'Expert Review · +€15' : 'Not selected');
-
-  updateStudentEmailVerification(values.universityEmail);
-  updateStudentEditingTerms();
-  $('#summary-total').textContent = privateFlow ? 'Quote after review' : euro(total);
-  $('#mobile-total').textContent = privateFlow ? 'Quote request' : euro(total);
-  $('#summary-subtitle').textContent = privateFlow
-    ? (state.file ? 'We will review your file and send a price before payment.' : 'Upload a file to request your quote.')
-    : (quote
-      ? `Package: ${state.packageSelection} · est. ${quote.weightG.toFixed(0)} g`
-      : 'Your final package is verified from the uploaded file weight.');
-  $('#summary-file').textContent = state.file?.name || 'Not uploaded';
-  $('#summary-weight').textContent = quote?.weightG != null ? `${quote.weightG.toFixed(0)} g` : (state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : 'Pending');
-  $('#summary-package').textContent = privateFlow ? `${Number($('#private-quantity')?.value) || 1} pieces` : state.packageSelection;
+  const qty = studentQuantity();
+  const totalWeight = totalPrintWeightG();
+  const fileWeight = fileWeightG();
+  const speed = request.speed === 'priority'
+    ? t('Priority · 1–2 days · +€39', 'Priorität · 1–2 Tage · +€39')
+    : request.speed === 'express'
+      ? t('Express · 3–5 days · +€19', 'Express · 3–5 Tage · +€19')
+      : t('Standard · 8–10 days', 'Standard · 8–10 Tage');
+  const engineering = request.engineering === 'review'
+    ? (expertReviewIncluded ? t('Expert · Included', 'Expertenprüfung · Inklusive') : t('Expert · +€15', 'Expertenprüfung · +€15'))
+    : request.engineering === 'editing'
+      ? t('Editing · €89/hour', 'Bearbeitung · 89 €/Stunde')
+      : t('Not selected', 'Nicht gewählt');
+  $('#summary-total').textContent = euro(total);
+  $('#mobile-total').textContent = euro(total);
+  $('#summary-subtitle').textContent = quote || fileWeight != null
+    ? t(`Package: ${state.packageSelection} · ${qty} print${qty === 1 ? '' : 's'} · est. ${(totalWeight ?? 0).toFixed(0)} g`, `Paket: ${state.packageSelection} · ${qty} Druck${qty === 1 ? '' : 'e'} · ca. ${(totalWeight ?? 0).toFixed(0)} g`)
+    : t('Upload a file to verify your package.', 'Lade eine Datei hoch, um dein Paket zu prüfen.');
+  $('#summary-file').textContent = state.file?.name || t('Not uploaded', 'Nicht hochgeladen');
+  $('#summary-weight').textContent = totalWeight != null
+    ? `${totalWeight.toFixed(0)} g (${qty}×)`
+    : (fileWeight != null ? `${fileWeight.toFixed(0)} g` : t('Pending', 'Ausstehend'));
+  $('#summary-package').textContent = state.packageSelection;
   $('#summary-material').textContent = displayMaterial();
   $('#summary-speed').textContent = speed;
   $('#summary-engineering').textContent = engineering;
+  updateStudentEmailVerification(values.universityEmail);
+  updateStudentEditingTerms();
   $('#summary-checkout').disabled = !ready;
   $('#mobile-checkout-button').disabled = !ready;
   $('#summary-hint').textContent = summaryHintText(values);
@@ -658,18 +781,24 @@ async function startCheckout() {
   }
   $('#summary-checkout').disabled = true;
   $('#mobile-checkout-button').disabled = true;
-  requestStatus.textContent = 'Opening secure checkout…';
+  requestStatus.textContent = state.job?.jobId
+    ? `Opening secure checkout for ${String(state.job.jobId).toUpperCase()}…`
+    : 'Opening secure checkout…';
   try {
     const session = await createCheckoutSession(state.job.jobId, {
       engineering: request.engineering,
       speed: request.speed,
       packageName: state.packageSelection,
+      quantity: studentQuantity(),
       verificationMethod: request.verification,
       universityEmail,
       contactMethod: request.contact,
       contactEmail,
       contactPhone
     }, studentId);
+    if (session.orderNumber) {
+      requestStatus.textContent = `Redirecting to payment for ${session.orderNumber}…`;
+    }
     window.location.assign(session.url);
   } catch (error) {
     requestStatus.textContent = error.message || 'Could not start checkout.';
@@ -720,7 +849,7 @@ async function poll(id) {
         if (job.status === 'ready' || job.metrics?.printer) placeMeshOnBed(job.metrics?.printer);
         state.awaitingSlice = false;
         status(
-          job.status === 'ready' ? 'Quote ready.'
+          job.status === 'ready' ? t('Quote ready.', 'Angebot ist fertig.')
             : job.status === 'manual-review' ? customerReviewMessage(job.warnings[0])
               : (job.error || 'Processing error'),
           job.status
@@ -800,14 +929,14 @@ function parseToolpath(source, onProgress) {
     try {
       if (source instanceof Uint8Array) {
         const copy = source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-        worker.postMessage({ bytes: copy, maxVoxels: 70000 }, [copy]);
+        worker.postMessage({ bytes: copy, maxVoxels: 22000 }, [copy]);
         return;
       }
       if (source instanceof ArrayBuffer) {
-        worker.postMessage({ bytes: source, maxVoxels: 70000 }, [source]);
+        worker.postMessage({ bytes: source, maxVoxels: 22000 }, [source]);
         return;
       }
-      worker.postMessage({ text: String(source), maxVoxels: 70000 });
+      worker.postMessage({ text: String(source), maxVoxels: 22000 });
     } catch (error) {
       clearTimeout(timer);
       worker.terminate();
@@ -1018,7 +1147,7 @@ $('#file').onchange = async event => {
       ? Number($('#business-quantity')?.value) || 1
       : privateFlow
         ? Number($('#private-quantity')?.value) || 1
-        : 1;
+        : studentQuantity();
     const flow = businessFlow ? 'business' : privateFlow ? 'private' : 'student';
     const created = await createJob(
       file,
@@ -1085,11 +1214,37 @@ document.addEventListener('click', event => {
 hamburger?.addEventListener('click', () => {
   const isOpen = mobileMenu.classList.toggle('is-open');
   hamburger.setAttribute('aria-expanded', String(isOpen));
-  hamburger.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+  hamburger.setAttribute(
+    'aria-label',
+    isOpen ? t('Close navigation menu', 'Menü schließen') : t('Open navigation menu', 'Menü öffnen')
+  );
 });
 
 mobileMenu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
   mobileMenu.classList.remove('is-open');
   hamburger?.setAttribute('aria-expanded', 'false');
-  hamburger?.setAttribute('aria-label', 'Open navigation menu');
+  hamburger?.setAttribute('aria-label', t('Open navigation menu', 'Menü öffnen'));
 }));
+
+function setLang(lang) {
+  const next = applyLangAttributes(persistLang(lang));
+  renderColorSwatches();
+  chooseColor(state.color);
+  renderOrderSummary?.();
+  const hamburgerBtn = $('#hamburger');
+  if (hamburgerBtn) {
+    const open = hamburgerBtn.getAttribute('aria-expanded') === 'true';
+    hamburgerBtn.setAttribute(
+      'aria-label',
+      open ? t('Close navigation menu', 'Menü schließen') : t('Open navigation menu', 'Menü öffnen')
+    );
+  }
+  return next;
+}
+
+bindLangSwitch(setLang);
+setLang(readStoredLang());
+window.addEventListener('3dnow:lang', () => {
+  renderColorSwatches();
+  chooseColor(state.color);
+});

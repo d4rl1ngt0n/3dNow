@@ -15,7 +15,7 @@ await ensureStorage();
 await loadRuntimeSettings();
 const app = express();
 const dist = path.join(config.root, 'dist');
-const marketingSite = path.join(config.root, '3dnow_17.html');
+const marketingSite = path.join(config.root, '3dnow_20.html');
 const quoteEngine = path.join(dist, 'index.html');
 const adminApp = path.join(dist, 'admin.html');
 const paymentResult = path.join(config.root, 'server/views/payment-result.html');

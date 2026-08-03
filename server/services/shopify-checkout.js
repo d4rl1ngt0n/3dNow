@@ -1,12 +1,13 @@
 import { config } from '../config.js';
 import crypto from 'node:crypto';
+import { studentPackageFromTotalWeight } from './quote.js';
 
 const STUDENT_PACKAGES = {
   Basic: { rank: 0, price: 39 },
   Medium: { rank: 1, price: 69 },
   Large: { rank: 2, price: 89 }
 };
-const FILE_EDITING_CENTS = 9000;
+const FILE_EDITING_CENTS = 8900;
 
 let cachedToken = null;
 let tokenExpiresAt = 0;
@@ -72,12 +73,20 @@ async function shopifyHeaders() {
 
 export function calculateOrderTotal(job, details) {
   if (!job.quote) throw new Error('A verified automatic quote is required before checkout.');
-  const automaticPackage = job.quote.package.name;
+  const quantity = Number.isInteger(Number(details.quantity)) && Number(details.quantity) > 0
+    ? Number(details.quantity)
+    : (job.quantity || job.quote.quantity || 1);
+  const fileWeightG = Number(job.metrics?.weightG ?? job.quote.weightG);
+  const totalWeightG = Number.isFinite(fileWeightG) ? fileWeightG * quantity : null;
+  const automaticPackage = Number.isFinite(totalWeightG)
+    ? studentPackageFromTotalWeight(totalWeightG).name
+    : job.quote.package.name;
   const selectedPackage = details.packageName || automaticPackage;
   if (!STUDENT_PACKAGES[selectedPackage]) throw new Error('Choose a valid student package.');
   if (STUDENT_PACKAGES[selectedPackage].rank < STUDENT_PACKAGES[automaticPackage].rank) {
-    throw new Error(`Your verified file weight requires at least the ${automaticPackage} package.`);
+    throw new Error(`Your verified total weight (${Math.round(totalWeightG)} g) requires at least the ${automaticPackage} package.`);
   }
+  job.quantity = quantity;
 
   const speedCents = details.speed === 'priority' ? 3900 : details.speed === 'express' ? 1900 : 0;
   const reviewCents = details.engineering === 'review' && selectedPackage === 'Basic' ? 1500 : 0;
@@ -115,18 +124,26 @@ export async function createShopifyCheckout(job, details) {
 
   const customerEmail = details.contactMethod === 'email' ? details.contactEmail : undefined;
 
+  // 3DN is the company order number. Shopify #n stays a payment reference only.
+  const orderNumber = String(job.id);
   const draftOrder = {
     draft_order: {
       line_items: [{
-        title: `3DNow student print: ${total.packageName}`,
+        title: `${orderNumber} · 3DNow student print · ${total.packageName}`,
         price: totalEur,
         quantity: 1,
         requires_shipping: true,
-        taxable: true
+        taxable: true,
+        properties: [
+          { name: 'Order number', value: orderNumber },
+          { name: 'File', value: String(job.filename || '').slice(0, 100) }
+        ]
       }],
-      note: `jobId=${job.id} | ${description}`,
+      tags: `${orderNumber}, 3dnow-student`,
+      note: `Order number: ${orderNumber}\njobId=${orderNumber}\n${description}`,
       note_attributes: [
-        { name: 'jobId', value: job.id },
+        { name: 'orderNumber', value: orderNumber },
+        { name: 'jobId', value: orderNumber },
         { name: 'filename', value: job.filename },
         { name: 'package', value: total.packageName },
         { name: 'material', value: job.requestedMaterial || job.material },

@@ -1,4 +1,10 @@
 import './styles.css';
+import {
+  applyLangAttributes,
+  bindLangSwitch,
+  persistLang,
+  readStoredLang
+} from './lang.js';
 
 const embedMode = new URLSearchParams(window.location.search).has('embed')
   || (window.self !== window.top);
@@ -54,34 +60,50 @@ deadlineInput?.addEventListener('change', () => {
 });
 
 function setLang(lang) {
-  const next = lang === 'en' ? 'en' : 'de';
-  document.documentElement.lang = next;
-  $$('[data-en][data-de]').forEach((node) => {
-    const value = node.getAttribute(`data-${next}`);
-    if (value != null) {
-      if (node.children.length && /<[a-z][\s\S]*>/i.test(value)) node.innerHTML = value;
-      else node.textContent = value;
-    }
-  });
-  $$('[data-en-ph][data-de-ph]').forEach((node) => {
-    node.placeholder = node.getAttribute(`data-${next}-ph`) || '';
-  });
-  $$('.langswitch button').forEach((button) => {
-    const active = button.dataset.lang === next;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', String(active));
-  });
-  try { localStorage.setItem('3dnow-lang', next); } catch { /* ignore */ }
+  const next = persistLang(lang);
+  applyLangAttributes(next);
+  return next;
 }
 
-$$('.langswitch button').forEach((button) => {
-  button.addEventListener('click', () => setLang(button.dataset.lang));
+bindLangSwitch(setLang);
+setLang(readStoredLang());
+
+const servicesMenuButton = $('#services-menu-button');
+const servicesMenu = $('#services-menu');
+const hamburger = $('#hamburger');
+const mobileMenu = $('#mobile-menu');
+
+servicesMenuButton?.addEventListener('click', () => {
+  const isOpen = servicesMenu.classList.toggle('is-open');
+  servicesMenuButton.setAttribute('aria-expanded', String(isOpen));
 });
 
-try {
-  const saved = localStorage.getItem('3dnow-lang');
-  if (saved === 'en' || saved === 'de') setLang(saved);
-} catch { /* ignore */ }
+document.addEventListener('click', (event) => {
+  if (!servicesMenuButton?.contains(event.target) && !servicesMenu?.contains(event.target)) {
+    servicesMenu?.classList.remove('is-open');
+    servicesMenuButton?.setAttribute('aria-expanded', 'false');
+  }
+});
+
+hamburger?.addEventListener('click', () => {
+  const isOpen = mobileMenu.classList.toggle('is-open');
+  hamburger.setAttribute('aria-expanded', String(isOpen));
+  hamburger.setAttribute(
+    'aria-label',
+    isOpen
+      ? (document.documentElement.lang === 'en' ? 'Close navigation menu' : 'Menü schließen')
+      : (document.documentElement.lang === 'en' ? 'Open navigation menu' : 'Menü öffnen')
+  );
+});
+
+mobileMenu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+  mobileMenu.classList.remove('is-open');
+  hamburger?.setAttribute('aria-expanded', 'false');
+  hamburger?.setAttribute(
+    'aria-label',
+    document.documentElement.lang === 'en' ? 'Open navigation menu' : 'Menü öffnen'
+  );
+}));
 
 function updateFileLabel() {
   const file = fileInput?.files?.[0];
@@ -181,6 +203,17 @@ form?.addEventListener('submit', async (event) => {
     if (quantityInput) quantityInput.value = '1';
     applyDeadlineMin();
     updateFileLabel();
+    const ref = payload.orderNumber ? String(payload.orderNumber).toUpperCase() : '';
+    if (ref) {
+      ok.textContent = isEn
+        ? `Thanks, we received your idea (${ref}) and will get back to you with the next steps.`
+        : `Danke, wir haben deine Idee erhalten (${ref}) und melden uns mit den nächsten Schritten.`;
+    } else {
+      ok.textContent = ok.getAttribute(isEn ? 'data-en' : 'data-de')
+        || (isEn
+          ? 'Thanks, we received your idea and will get back to you with the next steps.'
+          : 'Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.');
+    }
     status.textContent = '';
     ok.hidden = false;
   } catch (error) {

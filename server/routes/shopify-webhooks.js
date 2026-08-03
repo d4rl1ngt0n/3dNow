@@ -33,11 +33,13 @@ async function notifyPaidOrder({ job, orderRecord, order }) {
   const customerEmail = order.email || order.contact_email || details.contactEmail || orderRecord?.customer?.email;
   const totalCents = Math.round(parseFloat(order.total_price || '0') * 100);
   const filename = job?.filename || orderRecord?.filename || order.name || 'order';
+  const orderNumber = job?.id || orderRecord?.id || orderRecord?.jobId || null;
+  const shopifyOrderName = order.name || orderRecord?.payment?.shopifyOrderName || null;
 
   const lines = [
-    `Job ID: ${job?.id || orderRecord?.jobId || 'n/a'}`,
+    `Order number: ${orderNumber || 'n/a'}`,
     `Payment status: paid`,
-    `Shopify order: ${order.name || order.id}`,
+    shopifyOrderName ? `Shopify payment ref: ${shopifyOrderName}` : null,
     `File: ${filename}`,
     `Package: ${details.packageName || job?.quote?.package?.name || 'Manual review'}`,
     `Amount paid: EUR${(totalCents / 100).toFixed(2)}`,
@@ -48,10 +50,10 @@ async function notifyPaidOrder({ job, orderRecord, order }) {
     `University email: ${details.universityEmail || 'Not provided'}`,
     `Customer email: ${customerEmail || 'Not provided'}`,
     `Shipping address: ${shippingAddress}`
-  ];
+  ].filter(Boolean);
 
   await sendAdminEmail({
-    subject: `3DNow paid student print order: ${filename}`,
+    subject: `3DNow ${orderNumber || 'paid'} · student print · ${filename}`,
     lines,
     files: job ? [job.upload, job.studentIdFile] : (orderRecord?.files || [])
   });
@@ -62,7 +64,8 @@ async function notifyPaidOrder({ job, orderRecord, order }) {
       filename,
       packageName: details.packageName || job?.quote?.package?.name,
       totalCents,
-      shippingAddress
+      shippingAddress,
+      orderNumber
     });
   }
 }
@@ -94,10 +97,16 @@ shopifyWebhooksRouter.post('/orders-paid', async (req, res) => {
   if (!order || order.financial_status !== 'paid') return res.json({ received: true });
 
   const noteAttrs = order.note_attributes || [];
-  const jobId = noteAttrs.find(a => a.name === 'jobId')?.value
-    || (typeof order.note === 'string' ? order.note.match(/jobId[=:\s]+([a-zA-Z0-9_-]+)/)?.[1] : null);
+  const fromAttrs = noteAttrs.find(a => a.name === 'orderNumber' || a.name === 'jobId')?.value;
+  const fromNote = typeof order.note === 'string'
+    ? (order.note.match(/(?:Order number|jobId)\s*[:=]\s*(3DN\d+|[a-zA-Z0-9_-]+)/i)?.[1] || null)
+    : null;
+  const fromTags = typeof order.tags === 'string'
+    ? (order.tags.match(/\b(3DN\d+)\b/i)?.[1] || null)
+    : null;
+  const jobId = fromAttrs || fromNote || fromTags;
   if (!jobId) {
-    console.log('Shopify webhook: no jobId in note_attributes, skipping.');
+    console.log('Shopify webhook: no 3DN order number in note_attributes/tags, skipping.');
     return res.json({ received: true });
   }
 

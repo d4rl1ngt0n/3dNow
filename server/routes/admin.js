@@ -111,7 +111,8 @@ adminRouter.post('/orders/:id/notify', async (req, res) => {
       name: raw.customer?.name,
       statusLabel,
       message,
-      filename: raw.filename
+      filename: raw.filename,
+      orderNumber: raw.id
     });
     await orderStore.recordNotification(raw.id, {
       type: 'status-update',

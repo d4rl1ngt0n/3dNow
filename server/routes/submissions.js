@@ -15,13 +15,13 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const text = value => String(value || '').trim();
 const validEmail = value => emailPattern.test(text(value));
 
-async function notify(res, payload) {
+async function notify(res, payload, orderNumber = null) {
   try {
     await sendAdminEmail(payload);
-    res.status(202).json({ accepted: true, emailDelivered: true });
+    res.status(202).json({ accepted: true, emailDelivered: true, orderNumber });
   } catch (error) {
     console.error(`Submission email failed: ${error.message}`);
-    res.status(202).json({ accepted: true, emailDelivered: false });
+    res.status(202).json({ accepted: true, emailDelivered: false, orderNumber });
   }
 }
 
@@ -34,16 +34,29 @@ submissionsRouter.post('/contact', async (req, res) => {
   }
 
   const phone = text(req.body.phone);
-  await registerContactSubmission({ name, email, phone, message }).catch(error => {
+  let order = null;
+  try {
+    order = await registerContactSubmission({ name, email, phone, message });
+  } catch (error) {
     console.error(`Order registry failed for contact: ${error.message}`);
-  });
+  }
+  const orderNumber = order?.id || null;
 
   const [adminResult, customerResult] = await Promise.allSettled([
     sendAdminEmail({
-      subject: `3DNow contact request from ${name}`,
-      lines: ['Type: Contact request', `Name: ${name}`, `Email: ${email}`, `Phone: ${phone || 'Not provided'}`, '', 'Message:', message]
+      subject: `3DNow ${orderNumber || 'contact'} · contact from ${name}`,
+      lines: [
+        `Order number: ${orderNumber || 'n/a'}`,
+        'Type: Contact request',
+        `Name: ${name}`,
+        `Email: ${email}`,
+        `Phone: ${phone || 'Not provided'}`,
+        '',
+        'Message:',
+        message
+      ]
     }),
-    sendCustomerContactConfirmation({ email, name })
+    sendCustomerContactConfirmation({ email, name, orderNumber })
   ]);
 
   if (adminResult.status === 'rejected') {
@@ -55,6 +68,7 @@ submissionsRouter.post('/contact', async (req, res) => {
 
   return res.status(202).json({
     accepted: true,
+    orderNumber,
     emailDelivered: adminResult.status === 'fulfilled' && adminResult.value.delivered,
     customerEmailDelivered: customerResult.status === 'fulfilled' && customerResult.value.delivered
   });
@@ -83,22 +97,27 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
     }
   }
 
-  await registerIdeaSubmission({
-    name,
-    email,
-    phone,
-    description,
-    deadline,
-    quantity,
-    file: req.file
-  }).catch(error => {
+  let order = null;
+  try {
+    order = await registerIdeaSubmission({
+      name,
+      email,
+      phone,
+      description,
+      deadline,
+      quantity,
+      file: req.file
+    });
+  } catch (error) {
     console.error(`Order registry failed for idea: ${error.message}`);
-  });
+  }
+  const orderNumber = order?.id || null;
 
   const [adminResult, customerResult] = await Promise.allSettled([
     sendAdminEmail({
-      subject: `3DNow design request from ${name}`,
+      subject: `3DNow ${orderNumber || 'design'} · design request from ${name}`,
       lines: [
+        `Order number: ${orderNumber || 'n/a'}`,
         'Type: Design service request',
         `Name: ${name}`,
         `Email: ${email}`,
@@ -111,7 +130,7 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
       ],
       files: [req.file]
     }),
-    sendCustomerIdeaConfirmation({ email, name, description, deadline, quantity })
+    sendCustomerIdeaConfirmation({ email, name, description, deadline, quantity, orderNumber })
   ]);
   if (adminResult.status === 'rejected') {
     console.error(`Design request notification failed: ${adminResult.reason.message}`);
@@ -121,6 +140,7 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
   }
   return res.status(202).json({
     accepted: true,
+    orderNumber,
     emailDelivered: adminResult.status === 'fulfilled' && adminResult.value.delivered,
     customerEmailDelivered: customerResult.status === 'fulfilled' && customerResult.value.delivered
   });
@@ -140,19 +160,32 @@ submissionsRouter.post('/orders', upload.fields([{ name: 'model', maxCount: 1 },
     ...(req.files?.studentId || [])
   ];
 
-  await registerLegacyOrderSubmission({
-    flow,
-    contactEmail,
-    contactPhone,
-    configuration,
-    files
-  }).catch(error => {
+  let order = null;
+  try {
+    order = await registerLegacyOrderSubmission({
+      flow,
+      contactEmail,
+      contactPhone,
+      configuration,
+      files
+    });
+  } catch (error) {
     console.error(`Order registry failed for legacy order: ${error.message}`);
-  });
+  }
+  const orderNumber = order?.id || null;
 
   return notify(res, {
-    subject: `3DNow ${flow} ${flow === 'business' ? 'quote request' : 'order request'}`,
-    lines: ['Type: Order configuration', `Flow: ${flow}`, `Contact email: ${contactEmail || 'Not provided'}`, `Contact phone: ${contactPhone || 'Not provided'}`, '', 'Configuration:', configuration],
+    subject: `3DNow ${orderNumber || flow} · ${flow} ${flow === 'business' ? 'quote request' : 'order request'}`,
+    lines: [
+      `Order number: ${orderNumber || 'n/a'}`,
+      'Type: Order configuration',
+      `Flow: ${flow}`,
+      `Contact email: ${contactEmail || 'Not provided'}`,
+      `Contact phone: ${contactPhone || 'Not provided'}`,
+      '',
+      'Configuration:',
+      configuration
+    ],
     files
-  });
+  }, orderNumber);
 });

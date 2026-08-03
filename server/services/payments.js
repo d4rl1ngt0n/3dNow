@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { config } from '../config.js';
+import { studentPackageFromTotalWeight } from './quote.js';
 
 const SHIPPING_COUNTRIES = ['AT', 'BE', 'DE', 'DK', 'ES', 'FI', 'FR', 'IE', 'IT', 'LU', 'NL', 'PL', 'PT', 'SE'];
 const STUDENT_PACKAGES = {
@@ -7,7 +8,7 @@ const STUDENT_PACKAGES = {
   Medium: { rank: 1, price: 69 },
   Large: { rank: 2, price: 89 }
 };
-const FILE_EDITING_CENTS = 9000;
+const FILE_EDITING_CENTS = 8900;
 let stripe;
 
 export function getStripe() {
@@ -18,12 +19,20 @@ export function getStripe() {
 
 export function calculateOrderTotal(job, details) {
   if (!job.quote) throw new Error('A verified automatic quote is required before checkout.');
-  const automaticPackage = job.quote.package.name;
+  const quantity = Number.isInteger(Number(details.quantity)) && Number(details.quantity) > 0
+    ? Number(details.quantity)
+    : (job.quantity || job.quote.quantity || 1);
+  const fileWeightG = Number(job.metrics?.weightG ?? job.quote.weightG);
+  const totalWeightG = Number.isFinite(fileWeightG) ? fileWeightG * quantity : null;
+  const automaticPackage = Number.isFinite(totalWeightG)
+    ? studentPackageFromTotalWeight(totalWeightG).name
+    : job.quote.package.name;
   const selectedPackage = details.packageName || automaticPackage;
   if (!STUDENT_PACKAGES[selectedPackage]) throw new Error('Choose a valid student package.');
   if (STUDENT_PACKAGES[selectedPackage].rank < STUDENT_PACKAGES[automaticPackage].rank) {
-    throw new Error(`Your verified file weight requires at least the ${automaticPackage} package.`);
+    throw new Error(`Your verified total weight (${Math.round(totalWeightG)} g) requires at least the ${automaticPackage} package.`);
   }
+  job.quantity = quantity;
 
   const speedCents = details.speed === 'priority' ? 3900 : details.speed === 'express' ? 1900 : 0;
   const reviewCents = details.engineering === 'review' && selectedPackage === 'Basic' ? 1500 : 0;

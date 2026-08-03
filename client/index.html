@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <title>3DNow Student 3D Print Quote Engine</title>
+  <title>3DNow | Quote</title>
 </head>
 <body>
   <header>
@@ -16,51 +16,59 @@
         <a class="brand" href="https://3d-now.de/" aria-label="3d-now.de home"><span class="brand-stack"><img class="brand-logo" src="/brand-logo" alt="3d-now.de"><span class="brand-tagline">by iFactory3D</span></span></a>
         <div class="navlinks">
           <div class="dropdown">
-            <button class="navlink" id="services-menu-button" type="button" aria-expanded="false" aria-controls="services-menu">Services</button>
+            <button class="navlink" id="services-menu-button" type="button" aria-expanded="false" aria-controls="services-menu" data-en="Services" data-de="Leistungen">Leistungen</button>
             <div class="dropdown-menu" id="services-menu">
-              <a class="dd-item" href="/quote-engine-students"><span class="t">For Students</span><span class="d">Flat-rate packages, upload &amp; go</span></a>
-              <a class="dd-item" href="/quote-engine-business"><span class="t">For Businesses &amp; Startups</span><span class="d">Custom quotes, prototype to 1,000+</span></a>
-              <a class="dd-item" href="/quote-engine-private"><span class="t">For Private Customers</span><span class="d">Parts, gifts, hobby &amp; custom</span></a>
-              <a class="dd-item" href="/quote-engine-fileservice"><span class="t">No 3D file? We design it</span><span class="d">Send a photo or sketch, we create the model</span></a>
+              <a class="dd-item" href="/quote-engine-students"><span class="t" data-en="For Students" data-de="Studierende">Studierende</span><span class="d" data-en="Flat-rate packages, upload &amp; go" data-de="Festpreis-Pakete, hochladen &amp; fertig">Festpreis-Pakete, hochladen &amp; fertig</span></a>
+              <a class="dd-item" href="/quote-engine-business"><span class="t" data-en="For Businesses &amp; Startups" data-de="Unternehmen &amp; Startups">Unternehmen &amp; Startups</span><span class="d" data-en="Custom quotes, prototype to 1,000+" data-de="Individuelle Angebote, Prototyp bis 1.000+">Individuelle Angebote, Prototyp bis 1.000+</span></a>
+              <a class="dd-item" href="/quote-engine-private"><span class="t" data-en="For Private Customers" data-de="Privatkund:innen">Privatkund:innen</span><span class="d" data-en="Parts, gifts, hobby &amp; custom" data-de="Teile, Geschenke, Hobby &amp; Custom">Teile, Geschenke, Hobby &amp; Custom</span></a>
+              <a class="dd-item" href="/quote-engine-fileservice"><span class="t" data-en="No 3D file? We design it" data-de="Keine 3D-Datei? Wir gestalten sie">Keine 3D-Datei? Wir gestalten sie</span><span class="d" data-en="Send a photo or sketch, we create the model" data-de="Foto oder Skizze senden, wir erstellen das Modell">Foto oder Skizze senden, wir erstellen das Modell</span></a>
             </div>
           </div>
-          <a class="navlink" href="https://3d-now.de/pages/materials">Materials</a>
-          <a class="navlink" href="https://3d-now.de/pages/applications">Applications</a>
-          <a class="navlink" href="https://3d-now.de/pages/how-it-works">How it works</a>
-          <a class="navlink" href="https://3d-now.de/pages/about">About us</a>
-          <a class="navlink" href="https://3d-now.de/#reviews">Reviews</a>
+          <a class="navlink" href="https://3d-now.de/pages/materials" data-en="Materials" data-de="Materialien">Materialien</a>
+          <a class="navlink" href="https://3d-now.de/pages/applications" data-en="Applications" data-de="Anwendungsmöglichkeiten">Anwendungsmöglichkeiten</a>
+          <a class="navlink" href="https://3d-now.de/pages/how-it-works" data-en="How it works" data-de="So funktioniert's">So funktioniert's</a>
+          <a class="navlink" href="https://3d-now.de/pages/about" data-en="About us" data-de="Über uns">Über uns</a>
+          <a class="navlink" href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
           <a class="navlink" href="https://3d-now.de/pages/faq">FAQ</a>
         </div>
-        <div class="langswitch" role="group" aria-label="Language"><button class="active" type="button" aria-pressed="true">EN</button><button type="button" aria-pressed="false">DE</button></div>
-        <a class="signin" href="https://3d-now.de/pages/contact">Contact</a>
-        <button class="hamburger" id="hamburger" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div class="langswitch" role="group" aria-label="Language">
+          <button type="button" data-lang="de" class="active" aria-pressed="true">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a class="signin" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
+        <button class="hamburger" id="hamburger" type="button" data-en-aria="Open navigation menu" data-de-aria="Menü öffnen" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobile-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       </nav>
     </div>
   </header>
   <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile navigation">
-    <a class="navlink" href="https://3d-now.de/">Home</a>
-    <span class="mobile-menu-label">Services</span>
-    <div class="m-sub"><a href="/quote-engine-students">For Students</a><a href="/quote-engine-business">For Businesses &amp; Startups</a><a href="/quote-engine-private">For Private Customers</a><a href="/quote-engine-fileservice">No 3D file? We design it</a></div>
-    <a class="navlink" href="https://3d-now.de/pages/materials">Materials</a>
-    <a class="navlink" href="https://3d-now.de/pages/applications">Applications</a>
-    <a class="navlink" href="https://3d-now.de/pages/how-it-works">How it works</a>
-    <a class="navlink" href="https://3d-now.de/pages/about">About us</a>
-    <a class="navlink" href="https://3d-now.de/#reviews">Reviews</a>
+    <a class="navlink" href="https://3d-now.de/" data-en="Home" data-de="Start">Start</a>
+    <span class="mobile-menu-label" data-en="Services" data-de="Leistungen">Leistungen</span>
+    <div class="m-sub">
+      <a href="/quote-engine-students" data-en="For Students" data-de="Studierende">Studierende</a>
+      <a href="/quote-engine-business" data-en="For Businesses &amp; Startups" data-de="Unternehmen &amp; Startups">Unternehmen &amp; Startups</a>
+      <a href="/quote-engine-private" data-en="For Private Customers" data-de="Privatkund:innen">Privatkund:innen</a>
+      <a href="/quote-engine-fileservice" data-en="No 3D file? We design it" data-de="Keine 3D-Datei? Wir gestalten sie">Keine 3D-Datei? Wir gestalten sie</a>
+    </div>
+    <a class="navlink" href="https://3d-now.de/pages/materials" data-en="Materials" data-de="Materialien">Materialien</a>
+    <a class="navlink" href="https://3d-now.de/pages/applications" data-en="Applications" data-de="Anwendungsmöglichkeiten">Anwendungsmöglichkeiten</a>
+    <a class="navlink" href="https://3d-now.de/pages/how-it-works" data-en="How it works" data-de="So funktioniert's">So funktioniert's</a>
+    <a class="navlink" href="https://3d-now.de/pages/about" data-en="About us" data-de="Über uns">Über uns</a>
+    <a class="navlink" href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
     <a class="navlink" href="https://3d-now.de/pages/faq">FAQ</a>
-    <a class="navlink" href="https://3d-now.de/pages/contact">Contact</a>
+    <a class="navlink" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
   </nav>
   <main>
     <section class="intro" id="quote-engine">
-      <p class="eyebrow">For students</p>
-      <h1>Upload &amp; configure <em>your print.</em></h1>
-      <p>Drop your sliced file. We read the verified weight and print time, assign your package, then you choose material, colour and options.</p>
+      <p class="eyebrow" data-en="For students" data-de="Für Studierende">Für Studierende</p>
+      <h1 data-en="Upload &amp; configure <em>your print.</em>" data-de="Datei hochladen &amp; <em>Druck konfigurieren.</em>">Datei hochladen &amp; <em>Druck konfigurieren.</em></h1>
+      <p data-en="Drop your sliced file. We read the verified weight and print time, assign your package, then you choose material, colour and options." data-de="Lade deine geschnittene Datei hoch. Wir lesen Gewicht und Druckzeit aus, weisen dein Paket zu, dann wählst du Material, Farbe und Optionen.">Lade deine geschnittene Datei hoch. Wir lesen Gewicht und Druckzeit aus, weisen dein Paket zu, dann wählst du Material, Farbe und Optionen.</p>
     </section>
     <section class="workspace" aria-label="3D print quote configurator">
       <div class="controls">
-        <p class="panel-label"><span>01</span> Upload your file</p>
-        <label class="upload" id="drop-zone"><input id="file" type="file" accept=".stl,.obj,.3mf,.gcode,.gco,.nc"/><strong>Choose a 3D file</strong><span>G-code, 3MF, STL, OBJ, GCO or NC, up to 100 MB</span></label>
-        <p class="upload-confidential"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span>Your file stays private and confidential, always.</span></p>
-        <p class="upload-hint quiet">Already sliced files preferred (G-code, sliced 3MF, and similar). Those give the fastest, most accurate quote.</p>
+        <p class="panel-label"><span>01</span> <span data-en="Upload your file" data-de="Datei hochladen">Datei hochladen</span></p>
+        <label class="upload" id="drop-zone"><input id="file" type="file" accept=".stl,.obj,.3mf,.gcode,.gco,.nc"/><strong data-en="Choose a 3D file" data-de="3D-Datei wählen">3D-Datei wählen</strong><span data-en="G-code, 3MF, STL, OBJ, GCO or NC, up to 100 MB" data-de="G-code, 3MF, STL, OBJ, GCO oder NC, bis 100 MB">G-code, 3MF, STL, OBJ, GCO oder NC, bis 100 MB</span></label>
+        <p class="upload-confidential"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span data-en="Your file stays private and confidential, always." data-de="Deine Datei bleibt immer privat und vertraulich.">Deine Datei bleibt immer privat und vertraulich.</span></p>
+        <p class="upload-hint quiet" data-en="Already sliced files preferred (G-code, sliced 3MF, and similar). Those give the fastest, most accurate quote." data-de="Bereits geschnittene Dateien bevorzugt (G-code, geschnittenes 3MF u. ä.). Die liefern das schnellste und genaueste Angebot.">Bereits geschnittene Dateien bevorzugt (G-code, geschnittenes 3MF u. ä.). Die liefern das schnellste und genaueste Angebot.</p>
         <div id="upload-preview" class="upload-preview" hidden>
           <div class="upload-preview-thumb" id="upload-preview-thumb" aria-hidden="true"></div>
           <div class="upload-preview-copy">
@@ -68,121 +76,157 @@
             <span id="upload-preview-size"></span>
           </div>
         </div>
-        <p id="file-info" class="quiet">No file selected</p>
+        <p id="file-info" class="quiet" data-en="No file selected" data-de="Keine Datei ausgewählt">Keine Datei ausgewählt</p>
         <section class="package-options" id="package-options" aria-labelledby="package-heading">
-          <p class="panel-label" id="package-heading"><span>02</span> Your student package</p>
+          <p class="panel-label" id="package-heading"><span>02</span> <span data-en="Your student package" data-de="Dein Studierenden-Paket">Dein Studierenden-Paket</span></p>
           <div class="package-grid" aria-live="polite">
-            <button class="package-card" type="button" data-package="Basic" aria-pressed="true"><h2>Basic</h2><p>Up to 150 g</p><strong>€39</strong></button>
-            <button class="package-card" type="button" data-package="Medium" aria-pressed="false"><span class="package-badge">Expert review included</span><h2>Medium</h2><p>Up to 300 g</p><strong>€69</strong></button>
-            <button class="package-card" type="button" data-package="Large" aria-pressed="false"><span class="package-badge">Expert review included</span><h2>Large</h2><p>From 300 g</p><strong>€89</strong></button>
+            <button class="package-card" type="button" data-package="Basic" aria-pressed="true"><h2>Basic</h2><p data-en="Up to 150 g" data-de="Bis 150 g">Bis 150 g</p><strong>€39</strong></button>
+            <button class="package-card" type="button" data-package="Medium" aria-pressed="false"><span class="package-badge" data-en="Expert review included" data-de="Expertenprüfung inklusive">Expertenprüfung inklusive</span><h2>Medium</h2><p data-en="Up to 300 g" data-de="Bis 300 g">Bis 300 g</p><strong>€69</strong></button>
+            <button class="package-card" type="button" data-package="Large" aria-pressed="false"><span class="package-badge" data-en="Expert review included" data-de="Expertenprüfung inklusive">Expertenprüfung inklusive</span><h2>Large</h2><p data-en="From 300 g" data-de="Ab 300 g">Ab 300 g</p><strong>€89</strong></button>
           </div>
-          <p class="package-note" id="package-note">Select a package to explore prices. Your final package will be set automatically from the verified file weight.</p>
+          <label class="quote-field student-quantity-field" for="student-quantity">
+            <span data-en="Number of prints" data-de="Anzahl der Drucke">Anzahl der Drucke</span>
+            <input id="student-quantity" type="number" min="1" step="1" value="1" inputmode="numeric" required/>
+          </label>
+          <p class="package-total-weight quiet" id="student-total-weight" data-en="Total weight: pending" data-de="Gesamtgewicht: ausstehend">Gesamtgewicht: ausstehend</p>
+          <p class="package-note" id="package-note" data-en="Your package is set automatically from file weight × number of prints. You can upgrade to a higher package." data-de="Dein Paket wird automatisch aus Dateigewicht × Anzahl der Drucke gesetzt. Du kannst auf ein höheres Paket upgraden.">Dein Paket wird automatisch aus Dateigewicht × Anzahl der Drucke gesetzt. Du kannst auf ein höheres Paket upgraden.</p>
           <div id="basic-disclaimer" class="basic-disclaimer" hidden>
-            <p class="basic-disclaimer-title">Basic package: no engineering support</p>
-            <p>Without Expert Review, we print your file exactly as uploaded. No one checks geometry, wall thickness or dimensions before printing. You are responsible for how your print turns out, including issues caused by the file itself.</p>
-            <label class="basic-disclaimer-ack"><input id="basic-disclaimer-ack" type="checkbox"/> <span>I understand my file will be printed as-is and I accept responsibility for the result.</span></label>
+            <p class="basic-disclaimer-title" data-en="Basic package: no engineering support" data-de="Basic-Paket: keine Engineering-Unterstützung">Basic-Paket: keine Engineering-Unterstützung</p>
+            <p data-en="Without Expert Review, we print your file exactly as uploaded. No one checks geometry, wall thickness or dimensions before printing. You are responsible for how your print turns out, including issues caused by the file itself." data-de="Ohne Expert Review drucken wir deine Datei genau wie hochgeladen. Geometrie, Wandstärke und Maße werden vor dem Druck nicht geprüft. Du bist für das Ergebnis verantwortlich, auch bei Problemen durch die Datei selbst.">Ohne Expert Review drucken wir deine Datei genau wie hochgeladen. Geometrie, Wandstärke und Maße werden vor dem Druck nicht geprüft. Du bist für das Ergebnis verantwortlich, auch bei Problemen durch die Datei selbst.</p>
+            <label class="basic-disclaimer-ack"><input id="basic-disclaimer-ack" type="checkbox"/> <span data-en="I understand my file will be printed as-is and I accept responsibility for the result." data-de="Ich verstehe, dass meine Datei unverändert gedruckt wird, und übernehme die Verantwortung für das Ergebnis.">Ich verstehe, dass meine Datei unverändert gedruckt wird, und übernehme die Verantwortung für das Ergebnis.</span></label>
           </div>
         </section>
-        <fieldset id="material-field"><legend><span>03</span> Material</legend><div class="material-chips" id="material-chips" role="group" aria-label="Material"><button class="material-chip is-selected" type="button" data-material="PLA" aria-pressed="true">PLA</button><button class="material-chip" type="button" data-material="PETG" aria-pressed="false">PETG</button><button class="material-chip" type="button" data-material="ABS" aria-pressed="false">ABS</button><button class="material-chip" type="button" data-material="TPU" aria-pressed="false">TPU</button><button class="material-chip" type="button" data-material="Not sure" aria-pressed="false">Not sure</button></div><p class="material-note quiet">More materials on request.</p></fieldset>
-        <fieldset id="materials"><legend><span>04</span> Preview colour</legend><div id="colors" class="colors"></div><label class="custom-color-field" for="custom-color"><span>Colour not listed?</span><input id="custom-color" type="text" placeholder="Write your preferred colour" autocomplete="off"/></label><p class="color-note quiet">More colours on request.</p></fieldset>
-        <div id="status" role="status" aria-live="polite">Ready for an upload.</div>
+        <fieldset id="material-field"><legend><span>03</span> <span data-en="Material" data-de="Material">Material</span></legend><div class="material-chips" id="material-chips" role="group" aria-label="Material"><button class="material-chip is-selected" type="button" data-material="PLA" aria-pressed="true">PLA</button><button class="material-chip" type="button" data-material="PETG" aria-pressed="false">PETG</button><button class="material-chip" type="button" data-material="ABS" aria-pressed="false">ABS</button><button class="material-chip" type="button" data-material="TPU" aria-pressed="false">TPU</button><button class="material-chip" type="button" data-material="Not sure" aria-pressed="false" data-en="Not sure" data-de="Unsicher">Unsicher</button></div><p class="material-note quiet" data-en="More materials on request." data-de="Weitere Materialien auf Anfrage.">Weitere Materialien auf Anfrage.</p></fieldset>
+        <fieldset id="materials"><legend><span>04</span> <span data-en="Preview colour" data-de="Vorschau-Farbe">Vorschau-Farbe</span></legend><div id="colors" class="colors"></div><label class="custom-color-field" for="custom-color"><span data-en="Colour not listed?" data-de="Farbe nicht gelistet?">Farbe nicht gelistet?</span><input id="custom-color" type="text" data-en-ph="Write your preferred colour" data-de-ph="Wunschfarbe eintragen" placeholder="Wunschfarbe eintragen" autocomplete="off"/></label><p class="color-note quiet" data-en="More colours on request." data-de="Weitere Farben auf Anfrage.">Weitere Farben auf Anfrage.</p></fieldset>
+        <div id="status" role="status" aria-live="polite" data-en="Ready for an upload." data-de="Bereit für den Upload.">Bereit für den Upload.</div>
       </div>
       <div class="preview-panel">
         <div class="preview-shell">
           <div id="preview" class="preview" aria-label="3D model preview"></div>
           <div id="preview-loading" class="preview-loading" hidden>
-            <p id="preview-loading-label">Building preview…</p>
+            <p id="preview-loading-label" data-en="Building preview…" data-de="Vorschau wird erstellt…">Vorschau wird erstellt…</p>
             <div class="preview-loading-track" aria-hidden="true"><span id="preview-loading-fill"></span></div>
             <p id="preview-loading-percent">0%</p>
           </div>
         </div>
-        <div class="preview-actions"><button id="reset" type="button">Reset view</button><button id="fit" type="button">Fit model</button><label><input id="rotate" type="checkbox"/> Auto-rotate</label><button id="expand" type="button" disabled>Expand preview</button></div>
-        <section id="results" class="results preview-metrics" hidden><div><p class="eyebrow">Verified production data</p><h2>Production metrics</h2><p id="metric-note" class="quiet"></p><dl id="metrics"></dl></div></section>
+        <div class="preview-actions"><button id="reset" type="button" data-en="Reset view" data-de="Ansicht zurücksetzen">Ansicht zurücksetzen</button><button id="fit" type="button" data-en="Fit model" data-de="Modell einpassen">Modell einpassen</button><label><input id="rotate" type="checkbox"/> <span data-en="Auto-rotate" data-de="Automatisch drehen">Automatisch drehen</span></label><button id="expand" type="button" disabled data-en="Expand preview" data-de="Vorschau vergrößern">Vorschau vergrößern</button></div>
+        <section id="results" class="results preview-metrics" hidden><div><p class="eyebrow" data-en="Verified production data" data-de="Geprüfte Produktionsdaten">Geprüfte Produktionsdaten</p><h2 data-en="Production metrics" data-de="Produktionskennzahlen">Produktionskennzahlen</h2><p id="metric-note" class="quiet"></p><dl id="metrics"></dl></div></section>
       </div>
     </section>
     <section class="request-options" id="request-options" aria-labelledby="request-options-heading" hidden>
-      <p class="eyebrow">Secure checkout</p>
-      <h2 id="request-options-heading">Print and payment details</h2>
+      <p class="eyebrow" data-en="Secure checkout" data-de="Sicherer Checkout">Sicherer Checkout</p>
+      <h2 id="request-options-heading" data-en="Print and payment details" data-de="Druck- und Zahlungsdetails">Druck- und Zahlungsdetails</h2>
       <div class="request-layout">
       <div class="request-panel">
-        <fieldset id="engineering-field"><legend><span>01</span> Engineering support</legend><div class="option-grid option-grid-two" id="engineering-options"><div class="option-with-desc"><button class="option-card" type="button" data-engineering="review" aria-pressed="false"><span class="option-indicator"></span><span><strong>Get Expert Review</strong></span><b>+€15</b></button><details class="option-desc"><summary><span class="desc-toggle-show">See description</span><span class="desc-toggle-hide">Hide description</span></summary><p>Before we print, an expert reviews your file for geometry, wall thickness, dimensions, orientation and obvious print risks.</p></details></div><div class="option-with-desc"><button class="option-card" type="button" data-engineering="editing" aria-pressed="false"><span class="option-indicator"></span><span><strong>File Editing &amp; Optimization</strong><small>incl. 19% VAT</small></span><b>€90/hour</b></button><details class="option-desc"><summary><span class="desc-toggle-show">See description</span><span class="desc-toggle-hide">Hide description</span></summary><p>When your model is not print-ready, we repair, adjust and optimize the file for printing.</p></details></div></div><div id="private-disclaimer" class="basic-disclaimer" hidden><p class="basic-disclaimer-title">No Expert Review selected</p><p>Without Expert Review, there is no engineering support. We print your file as uploaded. You are responsible for how your print turns out, including issues caused by the file itself.</p><label class="basic-disclaimer-ack"><input id="private-disclaimer-ack" type="checkbox"/> <span>I understand my file will be printed as-is and I accept responsibility for the result.</span></label></div></fieldset>
-        <fieldset><legend><span>02</span> Production speed</legend><div class="option-grid option-grid-three" id="speed-options"><button class="option-card is-selected" type="button" data-speed="standard" aria-pressed="true"><span class="option-indicator"></span><span><strong>Standard</strong><small>8-10 days</small></span></button><button class="option-card" type="button" data-speed="priority" aria-pressed="false"><span class="option-badge">Most selected</span><span class="option-indicator"></span><span><strong>Priority</strong><small>1-2 days</small></span><b>+€39</b></button><button class="option-card" type="button" data-speed="express" aria-pressed="false"><span class="option-indicator"></span><span><strong>Express</strong><small>3-5 days</small></span><b>+€19</b></button></div></fieldset>
-        <fieldset><legend><span>03</span> Student verification</legend><p class="field-help">Verify your student status with a university email address or a student ID. This is required to place a student order.</p><div class="option-grid option-grid-two" id="verification-options"><button class="option-card" type="button" data-verification="email" aria-pressed="false"><span class="option-indicator"></span><span><strong>University email</strong><small>Verify with your .edu / .de / university address</small></span></button><button class="option-card" type="button" data-verification="id" aria-pressed="false"><span class="option-indicator"></span><span><strong>Student ID</strong><small>Upload a photo or PDF of your student ID</small></span></button></div><label class="quote-field" id="university-email-field" hidden>University email address<input id="university-email" type="email" autocomplete="email" placeholder="name@uni-duesseldorf.de"/><span class="verification-status" id="student-email-verification" role="status" aria-live="polite" hidden></span></label><label class="quote-field" id="student-id-field" hidden>Student ID<input id="student-id" type="file" accept=".jpg,.jpeg,.png,.pdf"/><div id="student-id-preview" class="upload-preview student-id-preview" hidden><div class="upload-preview-thumb" id="student-id-thumb" aria-hidden="true"></div><div class="upload-preview-copy"><strong id="student-id-name"></strong><span id="student-id-size"></span></div></div></label></fieldset>
-        <fieldset><legend><span>04</span> Contact details</legend><div class="option-grid option-grid-two" id="contact-options"><button class="option-card is-selected" type="button" data-contact="email" aria-pressed="true"><span class="option-indicator"></span><span><strong>Email</strong><small>Get updates by email</small></span></button><button class="option-card" type="button" data-contact="phone" aria-pressed="false"><span class="option-indicator"></span><span><strong>Phone / WhatsApp</strong><small>Get updates by phone or WhatsApp</small></span></button></div><label class="quote-field" id="contact-email-field">Email address<input id="contact-email" type="email" autocomplete="email" placeholder="you@example.com"/></label><label class="quote-field" id="contact-phone-field" hidden>Phone number<input id="contact-phone" type="tel" autocomplete="tel" placeholder="+49"/></label></fieldset>
+        <fieldset id="engineering-field"><legend><span>05</span> <span data-en="Engineering support" data-de="Konstruktionshilfe">Konstruktionshilfe</span></legend><div class="option-grid option-grid-two" id="engineering-options"><div class="option-with-desc"><button class="option-card" type="button" data-engineering="review" aria-pressed="false"><span class="option-indicator"></span><span><strong data-en="Get Expert Review" data-de="Expertenprüfung anfordern">Expertenprüfung anfordern</strong></span><b>+€15</b></button><details class="option-desc"><summary><span class="desc-toggle-show" data-en="See description" data-de="Beschreibung anzeigen">Beschreibung anzeigen</span><span class="desc-toggle-hide" data-en="Hide description" data-de="Beschreibung ausblenden">Beschreibung ausblenden</span></summary><p data-en="Before we print, an expert reviews your file for geometry, wall thickness, dimensions, orientation and obvious print risks." data-de="Vor dem Druck prüft ein Experte deine Datei auf Geometrie, Wandstärke, Maße, Ausrichtung und offensichtliche Druckrisiken.">Vor dem Druck prüft ein Experte deine Datei auf Geometrie, Wandstärke, Maße, Ausrichtung und offensichtliche Druckrisiken.</p></details></div><div class="option-with-desc"><button class="option-card" type="button" data-engineering="editing" aria-pressed="false"><span class="option-indicator"></span><span><strong data-en="File Editing &amp; Optimization" data-de="Dateibearbeitung und Optimierung">Dateibearbeitung und Optimierung</strong><small data-en="incl. 19% VAT" data-de="inkl. 19 % MwSt.">inkl. 19 % MwSt.</small></span><b>€89 / hour</b></button><details class="option-desc"><summary><span class="desc-toggle-show" data-en="See description" data-de="Beschreibung anzeigen">Beschreibung anzeigen</span><span class="desc-toggle-hide" data-en="Hide description" data-de="Beschreibung ausblenden">Beschreibung ausblenden</span></summary><p data-en="When your model is not print-ready, we repair, adjust and optimize the file for printing." data-de="Wenn das Modell noch nicht druckfertig ist, reparieren und optimieren wir die Datei und bereiten sie für den Druck vor.">Wenn das Modell noch nicht druckfertig ist, reparieren und optimieren wir die Datei und bereiten sie für den Druck vor.</p></details></div></div><div id="private-disclaimer" class="basic-disclaimer" hidden><p class="basic-disclaimer-title" data-en="No Expert Review selected" data-de="Keine Expertenprüfung gewählt">Keine Expertenprüfung gewählt</p><p data-en="Without Expert Review, there is no engineering support. We print your file as uploaded. You are responsible for how your print turns out, including issues caused by the file itself." data-de="Ohne Expertenprüfung gibt es keinen Engineering-Support. Wir drucken deine Datei wie hochgeladen. Du bist für das Ergebnis verantwortlich, auch bei Problemen durch die Datei selbst.">Ohne Expertenprüfung gibt es keinen Engineering-Support. Wir drucken deine Datei wie hochgeladen. Du bist für das Ergebnis verantwortlich, auch bei Problemen durch die Datei selbst.</p><label class="basic-disclaimer-ack"><input id="private-disclaimer-ack" type="checkbox"/> <span data-en="I understand my file will be printed as-is and I accept responsibility for the result." data-de="Ich verstehe, dass meine Datei unverändert gedruckt wird, und übernehme die Verantwortung für das Ergebnis.">Ich verstehe, dass meine Datei unverändert gedruckt wird, und übernehme die Verantwortung für das Ergebnis.</span></label></div></fieldset>
+        <fieldset id="speed-field"><legend><span>06</span> <span data-en="Production speed" data-de="Produktionsgeschwindigkeit">Produktionsgeschwindigkeit</span></legend><div class="option-grid option-grid-three" id="speed-options"><button class="option-card is-selected" type="button" data-speed="standard" aria-pressed="true"><span class="option-indicator"></span><span><strong data-en="Standard" data-de="Standard">Standard</strong><small data-en="8–10 days" data-de="8–10 Tage">8–10 Tage</small></span></button><button class="option-card" type="button" data-speed="priority" aria-pressed="false"><span class="option-badge" data-en="Most selected" data-de="Beliebteste Wahl">Beliebteste Wahl</span><span class="option-indicator"></span><span><strong data-en="Priority" data-de="Priorität">Priorität</strong><small data-en="1–2 days" data-de="1–2 Tage">1–2 Tage</small></span><b>+€39</b></button><button class="option-card" type="button" data-speed="express" aria-pressed="false"><span class="option-indicator"></span><span><strong data-en="Express" data-de="Express">Express</strong><small data-en="3–5 days" data-de="3–5 Tage">3–5 Tage</small></span><b>+€19</b></button></div></fieldset>
+        <fieldset id="verification-field"><legend><span>07</span> <span data-en="Student verification" data-de="Studierenden-Verifizierung">Studierenden-Verifizierung</span></legend><p class="field-help" data-en="Verify your student status with a university email address or by uploading your student ID. This is required to place a student order." data-de="Verifiziere deinen Studierendenstatus mit einer Hochschul-E-Mail-Adresse oder durch Hochladen deines Studienausweises. Das ist für eine Studierenden-Bestellung erforderlich.">Verifiziere deinen Studierendenstatus mit einer Hochschul-E-Mail-Adresse oder durch Hochladen deines Studienausweises. Das ist für eine Studierenden-Bestellung erforderlich.</p><div class="option-grid option-grid-two" id="verification-options"><button class="option-card" type="button" data-verification="email" aria-pressed="false"><span class="option-indicator"></span><span><strong data-en="University email" data-de="Hochschul-E-Mail">Hochschul-E-Mail</strong><small data-en="Verify with your .edu / university address" data-de="Mit deiner Hochschul-Adresse bestätigen">Mit deiner Hochschul-Adresse bestätigen</small></span></button><button class="option-card" type="button" data-verification="id" aria-pressed="false"><span class="option-indicator"></span><span><strong data-en="Student ID" data-de="Studienausweis">Studienausweis</strong><small data-en="Upload a photo of your student ID" data-de="Foto deines Studienausweises hochladen">Foto deines Studienausweises hochladen</small></span></button></div><label class="quote-field" id="university-email-field" hidden><span data-en="University email address" data-de="Hochschul-E-Mail-Adresse">Hochschul-E-Mail-Adresse</span><input id="university-email" type="email" autocomplete="email" data-en-ph="name@university.edu" data-de-ph="name@hochschule.de" placeholder="name@hochschule.de"/><span class="verification-status" id="student-email-verification" role="status" aria-live="polite" hidden></span></label><label class="quote-field" id="student-id-field" hidden><span data-en="Student ID" data-de="Studienausweis">Studienausweis</span><input id="student-id" type="file" accept=".jpg,.jpeg,.png,.pdf"/><div id="student-id-preview" class="upload-preview student-id-preview" hidden><div class="upload-preview-thumb" id="student-id-thumb" aria-hidden="true"></div><div class="upload-preview-copy"><strong id="student-id-name"></strong><span id="student-id-size"></span></div></div></label></fieldset>
+        <fieldset id="contact-field"><legend><span>08</span> <span data-en="Contact details" data-de="Kontaktdaten">Kontaktdaten</span></legend><div class="option-grid option-grid-two" id="contact-options"><button class="option-card is-selected" type="button" data-contact="email" aria-pressed="true"><span class="option-indicator"></span><span><strong data-en="Email" data-de="E-Mail">E-Mail</strong><small data-en="Get updates by email" data-de="Updates per E-Mail erhalten">Updates per E-Mail erhalten</small></span></button><button class="option-card" type="button" data-contact="phone" aria-pressed="false"><span class="option-indicator"></span><span><strong data-en="Phone / WhatsApp" data-de="Telefon / WhatsApp">Telefon / WhatsApp</strong><small data-en="Get updates by phone or WhatsApp" data-de="Updates per Telefon oder WhatsApp">Updates per Telefon oder WhatsApp</small></span></button></div><label class="quote-field" id="contact-email-field"><span data-en="Email address" data-de="E-Mail-Adresse">E-Mail-Adresse</span><input id="contact-email" type="email" autocomplete="email" data-en-ph="you@example.com" data-de-ph="name@beispiel.de" placeholder="name@beispiel.de"/></label><label class="quote-field" id="contact-phone-field" hidden><span data-en="Phone number" data-de="Telefonnummer">Telefonnummer</span><input id="contact-phone" type="tel" autocomplete="tel" data-en-ph="+49 " data-de-ph="+49 " placeholder="+49"/><span class="field-help quiet" data-en="Use a number that's active on WhatsApp. That's how we'll reach you." data-de="Bitte eine Nummer angeben, die über WhatsApp erreichbar ist. So melden wir uns.">Bitte eine Nummer angeben, die über WhatsApp erreichbar ist. So melden wir uns.</span></label></fieldset>
         <p class="request-status" id="request-status" role="status" aria-live="polite"></p>
       </div>
       <aside class="order-summary" id="order-summary" aria-labelledby="order-summary-heading">
-        <p class="eyebrow">Your result</p>
+        <p class="eyebrow" data-en="Your result" data-de="Dein Ergebnis">Dein Ergebnis</p>
         <h3 id="order-summary-heading" class="summary-total"><span id="summary-total">€39.00</span></h3>
-        <p class="summary-subtitle" id="summary-subtitle">Upload a file to verify your package.</p>
-        <dl class="summary-lines"><div><dt>File</dt><dd id="summary-file">Not uploaded</dd></div><div><dt>Weight</dt><dd id="summary-weight">Pending</dd></div><div><dt>Package</dt><dd id="summary-package">Basic</dd></div><div><dt>Material</dt><dd id="summary-material">PLA</dd></div><div><dt>Speed</dt><dd id="summary-speed">Standard · 8-10 days</dd></div><div><dt>Engineering</dt><dd id="summary-engineering">Not selected</dd></div></dl>
-        <button class="summary-checkout" id="summary-checkout" type="button">Continue to payment</button>
-        <button class="request-submit summary-checkout-alt" id="submit-request" type="button" hidden>Continue to secure payment</button>
-        <p class="summary-hint" id="summary-hint">Verify your student status to continue.</p>
+        <p class="summary-subtitle" id="summary-subtitle" data-en="Upload a file to verify your package." data-de="Lade eine Datei hoch, um dein Paket zu prüfen.">Lade eine Datei hoch, um dein Paket zu prüfen.</p>
+        <dl class="summary-lines"><div><dt data-en="File" data-de="Datei">Datei</dt><dd id="summary-file" data-en="Not uploaded" data-de="Nicht hochgeladen">Nicht hochgeladen</dd></div><div><dt data-en="Weight" data-de="Gewicht">Gewicht</dt><dd id="summary-weight" data-en="Pending" data-de="Ausstehend">Ausstehend</dd></div><div><dt data-en="Package" data-de="Paket">Paket</dt><dd id="summary-package">Basic</dd></div><div><dt data-en="Material" data-de="Material">Material</dt><dd id="summary-material">PLA</dd></div><div><dt data-en="Speed" data-de="Tempo">Tempo</dt><dd id="summary-speed" data-en="Standard · 8-10 days" data-de="Standard · 8–10 Tage">Standard · 8–10 Tage</dd></div><div><dt data-en="Engineering" data-de="Engineering">Engineering</dt><dd id="summary-engineering" data-en="Not selected" data-de="Nicht gewählt">Nicht gewählt</dd></div></dl>
+        <button class="summary-checkout" id="summary-checkout" type="button" data-en="Continue to payment" data-de="Weiter zur Zahlung">Weiter zur Zahlung</button>
+        <button class="request-submit summary-checkout-alt" id="submit-request" type="button" hidden data-en="Continue to secure payment" data-de="Weiter zur sicheren Zahlung">Weiter zur sicheren Zahlung</button>
+        <p class="summary-hint" id="summary-hint" data-en="Verify your student status to continue." data-de="Bestätige deinen Studierendenstatus, um fortzufahren.">Bestätige deinen Studierendenstatus, um fortzufahren.</p>
       </aside>
       </div>
     </section>
-    <div class="mobile-checkout" id="mobile-checkout" hidden><div><span>Total</span><strong id="mobile-total">€39.00</strong></div><button id="mobile-checkout-button" type="button">Pay securely</button></div>
+    <div class="mobile-checkout" id="mobile-checkout" hidden><div><span data-en="Total" data-de="Summe">Summe</span><strong id="mobile-total">€39.00</strong></div><button id="mobile-checkout-button" type="button" data-en="Pay securely" data-de="Sicher bezahlen">Sicher bezahlen</button></div>
     <div id="success-toast" class="success-toast" hidden role="status" aria-live="polite">
       <div class="success-toast-card">
         <div class="success-toast-icon" aria-hidden="true">
           <svg viewBox="0 0 52 52" fill="none"><circle cx="26" cy="26" r="24" stroke="currentColor" stroke-width="2"/><circle cx="26" cy="26" r="18" fill="currentColor" opacity="0.12"/><path d="M16.5 27.2l6.2 6.3L35.5 20" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <p id="success-toast-message">Request sent</p>
+        <p id="success-toast-message" data-en="Request sent" data-de="Anfrage gesendet">Anfrage gesendet</p>
       </div>
     </div>
     <section class="student-projects" aria-labelledby="student-projects-heading">
       <div class="student-projects-copy">
-        <p class="eyebrow">For students</p>
-        <h2 id="student-projects-heading">Built for student projects.</h2>
-        <p>Coursework and thesis models, architecture and engineering parts, design studies and portfolio pieces. Upload your file, receive a clear quote, and keep your project moving. When the campus lab is full, closed or too slow, we print and ship from Düsseldorf.</p>
+        <p class="eyebrow" data-en="For students" data-de="Für Studierende">Für Studierende</p>
+        <h2 id="student-projects-heading" data-en="Built for student projects." data-de="Für Studierendenprojekte gebaut.">Für Studierendenprojekte gebaut.</h2>
+        <p data-en="Coursework and thesis models, architecture and engineering parts, design studies and portfolio pieces. Upload your file, receive a clear quote, and keep your project moving. When the campus lab is full, closed or too slow, we print and ship from Düsseldorf." data-de="Hausarbeiten und Abschlussmodelle, Architektur- und Engineering-Teile, Designstudien und Portfolio-Stücke. Lade deine Datei hoch, erhalte ein klares Angebot und halte dein Projekt in Bewegung. Wenn das Campus-Labor voll, geschlossen oder zu langsam ist, drucken und versenden wir aus Düsseldorf.">Hausarbeiten und Abschlussmodelle, Architektur- und Engineering-Teile, Designstudien und Portfolio-Stücke. Lade deine Datei hoch, erhalte ein klares Angebot und halte dein Projekt in Bewegung. Wenn das Campus-Labor voll, geschlossen oder zu langsam ist, drucken und versenden wir aus Düsseldorf.</p>
       </div>
       <aside class="university-note" aria-labelledby="university-note-heading">
         <div>
-          <h3 id="university-note-heading">For universities, schools and lecturers</h3>
-          <p>Offer your students a simple external 3D printing option for overflow demand, private projects and tight deadlines.</p>
+          <h3 id="university-note-heading" data-en="For universities, schools and lecturers" data-de="Für Unis, Schulen und Lehrende">Für Unis, Schulen und Lehrende</h3>
+          <p data-en="Offer your students a simple external 3D printing option for overflow demand, private projects and tight deadlines." data-de="Biete deinen Studierenden eine einfache externe 3D-Druck-Option für Überlauf, Privatprojekte und enge Fristen.">Biete deinen Studierenden eine einfache externe 3D-Druck-Option für Überlauf, Privatprojekte und enge Fristen.</p>
         </div>
-        <a class="university-note-link" href="https://3d-now.de/pages/contact">Partner with us</a>
+        <a class="university-note-link" href="https://3d-now.de/pages/contact" data-en="Partner with us" data-de="Partner werden">Partner werden</a>
       </aside>
     </section>
     <section class="private-customer-content" id="private-customer-content" aria-labelledby="private-printing-heading" hidden>
       <div class="private-content-intro">
-        <p class="eyebrow">For private customers</p>
-        <h2 id="private-printing-heading">Anything you need printed.</h2>
-        <p>Replacement and spare parts, hobby and tabletop pieces, gifts, miniatures, cosplay props, home accessories and custom objects. If you have a printable file, upload it above. If you only have an idea, describe it and we'll check whether we can model it for you.</p>
+        <p class="eyebrow" data-en="For private customers" data-de="Für Privatkund:innen">Für Privatkund:innen</p>
+        <h2 id="private-printing-heading" data-en="Anything you need printed." data-de="Alles, was du drucken möchtest.">Alles, was du drucken möchtest.</h2>
+        <p data-en="Replacement and spare parts, hobby and tabletop pieces, gifts, miniatures, cosplay props, home accessories and custom objects. If you have a printable file, upload it above. If you only have an idea, describe it and we'll check whether we can model it for you." data-de="Ersatz- und Verschleißteile, Hobby- und Tabletop-Stücke, Geschenke, Miniaturen, Cosplay-Requisiten, Wohnaccessoires und individuelle Objekte. Wenn du eine druckbare Datei hast, lade sie oben hoch. Wenn du nur eine Idee hast, beschreib sie und wir prüfen, ob wir sie für dich modellieren können.">Ersatz- und Verschleißteile, Hobby- und Tabletop-Stücke, Geschenke, Miniaturen, Cosplay-Requisiten, Wohnaccessoires und individuelle Objekte. Wenn du eine druckbare Datei hast, lade sie oben hoch. Wenn du nur eine Idee hast, beschreib sie und wir prüfen, ob wir sie für dich modellieren können.</p>
       </div>
       <div class="private-replacement">
-        <p class="eyebrow">Replacement parts</p>
-        <h2>Need a replacement part?</h2>
-        <p>A clip, cover, holder or small part broke or went missing? Send us a photo, sketch or 3D file. We will check whether the part can be recreated and which material makes sense.</p>
+        <p class="eyebrow" data-en="Replacement parts" data-de="Ersatzteile">Ersatzteile</p>
+        <h2 data-en="Need a replacement part?" data-de="Du brauchst ein Ersatzteil?">Du brauchst ein Ersatzteil?</h2>
+        <p data-en="A clip, cover, holder or small part broke or went missing? Send us a photo, sketch or 3D file. We will check whether the part can be recreated and which material makes sense." data-de="Ein Clip, eine Abdeckung, Halterung oder ein kleines Teil ist gebrochen oder verloren gegangen? Sende uns ein Foto, eine Skizze oder eine 3D-Datei. Wir prüfen, ob das Teil nachgebaut werden kann und welches Material sinnvoll ist.">Ein Clip, eine Abdeckung, Halterung oder ein kleines Teil ist gebrochen oder verloren gegangen? Sende uns ein Foto, eine Skizze oder eine 3D-Datei. Wir prüfen, ob das Teil nachgebaut werden kann und welches Material sinnvoll ist.</p>
         <ol class="private-steps">
-          <li><span>01</span><p>Send a photo, sketch or file.</p></li>
-          <li><span>02</span><p>We check geometry and material.</p></li>
-          <li><span>03</span><p>You receive a quote.</p></li>
-          <li><span>04</span><p>We print the part after approval.</p></li>
+          <li><span>01</span><p data-en="Send a photo, sketch or file." data-de="Foto, Skizze oder Datei senden.">Foto, Skizze oder Datei senden.</p></li>
+          <li><span>02</span><p data-en="We check geometry and material." data-de="Wir prüfen Geometrie und Material.">Wir prüfen Geometrie und Material.</p></li>
+          <li><span>03</span><p data-en="You receive a quote." data-de="Du erhältst ein Angebot.">Du erhältst ein Angebot.</p></li>
+          <li><span>04</span><p data-en="We print the part after approval." data-de="Nach Freigabe drucken wir das Teil.">Nach Freigabe drucken wir das Teil.</p></li>
         </ol>
-        <a class="private-content-button" href="#quote-engine">Check my part <span aria-hidden="true">→</span></a>
+        <a class="private-content-button" href="#quote-engine" data-en="Check my part <span aria-hidden=&quot;true&quot;>→</span>" data-de="Mein Teil prüfen lassen <span aria-hidden=&quot;true&quot;>→</span>">Mein Teil prüfen lassen <span aria-hidden="true">→</span></a>
       </div>
       <aside class="private-file-help">
-        <p class="eyebrow">No 3D file yet?</p>
-        <h3>No 3D file? We'll help you create one.</h3>
-        <p>Send us a photo, sketch or reference and we'll create a printable 3D model for you.</p>
-        <a href="/quote-engine-fileservice">Describe your idea <span aria-hidden="true">→</span></a>
+        <p class="eyebrow" data-en="No 3D file yet?" data-de="Noch keine 3D-Datei?">Noch keine 3D-Datei?</p>
+        <h3 data-en="No 3D file? We'll help you create one." data-de="Keine 3D-Datei? Wir helfen dir, eine zu erstellen.">Keine 3D-Datei? Wir helfen dir, eine zu erstellen.</h3>
+        <p data-en="Send us a photo, sketch or reference and we'll create a printable 3D model for you." data-de="Schick uns ein Foto, eine Skizze oder eine Vorlage, und wir erstellen ein druckbares 3D-Modell für dich.">Schick uns ein Foto, eine Skizze oder eine Vorlage, und wir erstellen ein druckbares 3D-Modell für dich.</p>
+        <a href="/quote-engine-fileservice" data-en="Describe your idea <span aria-hidden=&quot;true&quot;>→</span>" data-de="Idee beschreiben <span aria-hidden=&quot;true&quot;>→</span>">Idee beschreiben <span aria-hidden="true">→</span></a>
       </aside>
     </section>
   </main>
   <footer id="contact">
     <div class="wrap">
       <div class="foot-grid">
-        <div class="foot-brand"><a class="brand" href="https://3d-now.de/"><span class="dot" aria-hidden="true"></span>3DNow</a><p>3D printing, now. From file to finished part, for students, businesses and makers across Europe.</p></div>
-        <div class="foot-col"><h2>Services</h2><a href="/quote-engine-students">For Students</a><a href="/quote-engine-business">For Businesses &amp; Startups</a><a href="/quote-engine-private">For Private Customers</a><a href="/quote-engine-fileservice">No 3D file? We design it</a></div>
-        <div class="foot-col"><h2>Explore</h2><a href="https://3d-now.de/pages/materials">Materials</a><a href="https://3d-now.de/pages/applications">Applications</a><a href="https://3d-now.de/pages/how-it-works">How it works</a><a href="https://3d-now.de/pages/about">About us</a><a href="https://3d-now.de/pages/faq">FAQ</a><a href="https://3d-now.de/#reviews">Reviews</a></div>
-        <div class="foot-col"><h2>Contact</h2><a href="tel:+4921115859748">+49 211 15859748</a><a href="mailto:support@ifactory3d.com">support@ifactory3d.com</a><a href="https://wa.me/4921115859748" target="_blank" rel="noopener">WhatsApp</a><a href="https://3d-now.de/pages/contact">Wanheimer Str. 43, 40472 Düsseldorf</a></div>
+        <div class="foot-brand">
+          <a class="brand" href="https://3d-now.de/"><span class="dot" aria-hidden="true"></span>3DNow</a>
+          <p data-en="3D printing, now. From file to finished part, for students, businesses and makers across Europe." data-de="3D-Druck, jetzt. Von der Datei zum fertigen Bauteil, für Studierende, Unternehmen und Maker in ganz Europa.">3D-Druck, jetzt. Von der Datei zum fertigen Bauteil, für Studierende, Unternehmen und Maker in ganz Europa.</p>
+        </div>
+        <div class="foot-col">
+          <h2 data-en="Services" data-de="Leistungen">Leistungen</h2>
+          <a href="/quote-engine-students" data-en="For Students" data-de="Studierende">Studierende</a>
+          <a href="/quote-engine-business" data-en="For Businesses &amp; Startups" data-de="Unternehmen &amp; Startups">Unternehmen &amp; Startups</a>
+          <a href="/quote-engine-private" data-en="For Private Customers" data-de="Privatkund:innen">Privatkund:innen</a>
+          <a href="/quote-engine-fileservice" data-en="No 3D file? We design it" data-de="Keine 3D-Datei? Wir gestalten sie">Keine 3D-Datei? Wir gestalten sie</a>
+        </div>
+        <div class="foot-col">
+          <h2 data-en="Explore" data-de="Entdecken">Entdecken</h2>
+          <a href="https://3d-now.de/pages/materials" data-en="Materials" data-de="Materialien">Materialien</a>
+          <a href="https://3d-now.de/pages/applications" data-en="Applications" data-de="Anwendungsmöglichkeiten">Anwendungsmöglichkeiten</a>
+          <a href="https://3d-now.de/pages/how-it-works" data-en="How it works" data-de="So funktioniert's">So funktioniert's</a>
+          <a href="https://3d-now.de/pages/about" data-en="About us" data-de="Über uns">Über uns</a>
+          <a href="https://3d-now.de/pages/faq">FAQ</a>
+          <a href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
+        </div>
+        <div class="foot-col">
+          <h2 data-en="Contact" data-de="Kontakt">Kontakt</h2>
+          <a href="tel:+4921115859748">+49 211 15859748</a>
+          <a href="mailto:support@ifactory3d.com">support@ifactory3d.com</a>
+          <a href="https://wa.me/4921115859748" target="_blank" rel="noopener">WhatsApp</a>
+          <a href="https://3d-now.de/pages/contact">Wanheimer Str. 43, 40472 Düsseldorf</a>
+        </div>
       </div>
-      <div class="foot-bottom"><span>© 2026 3d-now.de · Düsseldorf, Deutschland</span><div class="legal-links"><a href="https://3d-now.de/pages/impressum">Impressum</a><a href="https://3d-now.de/pages/datenschutz">Privacy</a><a href="https://3d-now.de/pages/agb">Terms</a><a href="https://3d-now.de/pages/widerruf">Withdrawal</a></div></div>
+      <div class="foot-bottom">
+        <span>© 2026 3d-now.de · Düsseldorf, Deutschland</span>
+        <div class="legal-links">
+          <a href="https://3d-now.de/pages/impressum">Impressum</a>
+          <a href="https://3d-now.de/pages/datenschutz" data-en="Privacy" data-de="Datenschutz">Datenschutz</a>
+          <a href="https://3d-now.de/pages/agb" data-en="Terms" data-de="AGB">AGB</a>
+          <a href="https://3d-now.de/pages/widerruf" data-en="Withdrawal" data-de="Widerruf">Widerruf</a>
+        </div>
+      </div>
     </div>
   </footer>
-  <dialog id="preview-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><div><h2 id="dialog-title">Expanded 3D preview</h2><p id="dialog-subtitle"></p></div><button id="close-dialog" type="button">Close</button></div><div id="modal-preview" class="preview modal-preview"></div><div id="dialog-details"></div><div class="preview-actions"><button id="modal-reset" type="button">Reset view</button><button id="modal-fit" type="button">Fit model</button><label><input id="modal-rotate" type="checkbox"/> Auto-rotate</label></div></dialog>
+  <dialog id="preview-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><div><h2 id="dialog-title" data-en="Expanded 3D preview" data-de="Vergrößerte 3D-Vorschau">Vergrößerte 3D-Vorschau</h2><p id="dialog-subtitle"></p></div><button id="close-dialog" type="button" data-en="Close" data-de="Schließen">Schließen</button></div><div id="modal-preview" class="preview modal-preview"></div><div id="dialog-details"></div><div class="preview-actions"><button id="modal-reset" type="button" data-en="Reset view" data-de="Ansicht zurücksetzen">Ansicht zurücksetzen</button><button id="modal-fit" type="button" data-en="Fit model" data-de="Modell einpassen">Modell einpassen</button><label><input id="modal-rotate" type="checkbox"/> <span data-en="Auto-rotate" data-de="Automatisch drehen">Automatisch drehen</span></label></div></dialog>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

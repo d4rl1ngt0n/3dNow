@@ -29,8 +29,8 @@ export function businessQuote({ printTimeSec, printer, quantity, speed = 'standa
   const unitPrice = Number((unitPrintCost * multiplier).toFixed(2));
   const productionTotal = Number((unitPrice * quantity).toFixed(2));
   const speedCost = speed === 'priority' ? 59 : speed === 'express' ? 39 : 0;
-  const reviewCost = engineering === 'review' ? 15 : 0;
-  const editingCost = engineering === 'editing' ? 110 : 0;
+  const reviewCost = engineering === 'review' ? 35 : 0;
+  const editingCost = engineering === 'editing' ? 89 : 0;
   const total = Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2));
   return {
     currency: 'EUR',
@@ -50,15 +50,20 @@ export function businessQuote({ printTimeSec, printer, quantity, speed = 'standa
   };
 }
 
-export function studentQuote({ material, weightG, printTimeSec, printer }) {
-  if (!Number.isFinite(weightG) || !printer) return null;
-  // Student package price is weight-only. Speed / expert review / editing are add-ons at checkout.
+/** Package from total filament weight (file weight × number of prints). */
+export function studentPackageFromTotalWeight(totalWeightG) {
   // Basic: up to 150 g · Medium: up to 300 g · Large: above 300 g
-  const packageInfo = weightG <= 150
-    ? { name: 'Basic', minWeightG: 0, maxWeightG: 150, price: 39 }
-    : weightG <= 300
-      ? { name: 'Medium', minWeightG: 150, maxWeightG: 300, price: 69 }
-      : { name: 'Large', minWeightG: 300, maxWeightG: null, price: 89 };
+  if (totalWeightG <= 150) return { name: 'Basic', minWeightG: 0, maxWeightG: 150, price: 39 };
+  if (totalWeightG <= 300) return { name: 'Medium', minWeightG: 150, maxWeightG: 300, price: 69 };
+  return { name: 'Large', minWeightG: 300, maxWeightG: null, price: 89 };
+}
+
+export function studentQuote({ material, weightG, printTimeSec, printer, quantity = 1 }) {
+  if (!Number.isFinite(weightG) || !printer) return null;
+  const qty = Number.isInteger(quantity) && quantity > 0 ? quantity : 1;
+  const totalWeightG = Number((weightG * qty).toFixed(4));
+  // Student package price is total-weight-only. Speed / expert review / editing are add-ons at checkout.
+  const packageInfo = studentPackageFromTotalWeight(totalWeightG);
   const printHours = Number(((printTimeSec || 0) / 3600).toFixed(2));
   const selected = PRINTERS[printer.id] || printer;
   return {
@@ -66,6 +71,8 @@ export function studentQuote({ material, weightG, printTimeSec, printer }) {
     flow: 'student',
     material,
     weightG,
+    quantity: qty,
+    totalWeightG,
     package: packageInfo,
     printer: {
       id: selected.id,

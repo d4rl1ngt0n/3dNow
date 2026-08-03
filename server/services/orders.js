@@ -51,7 +51,7 @@ export async function registerBusinessQuote(job) {
       statusNote: 'Business quote details refreshed'
     });
   }
-  return orderStore.create(payload);
+  return orderStore.create({ ...payload, id: job.id });
 }
 
 export async function registerPrivateQuote(job) {
@@ -91,7 +91,7 @@ export async function registerPrivateQuote(job) {
       statusNote: 'Private quote details refreshed'
     });
   }
-  return orderStore.create(payload);
+  return orderStore.create({ ...payload, id: job.id });
 }
 
 export async function registerCheckoutPending(job) {
@@ -136,7 +136,7 @@ export async function registerCheckoutPending(job) {
       summary: payload.summary
     });
   }
-  return orderStore.create(payload);
+  return orderStore.create({ ...payload, id: job.id });
 }
 
 export async function registerPaidStudentOrder(job, session) {
@@ -190,7 +190,7 @@ export async function registerPaidStudentOrder(job, session) {
       summary: payload.summary
     });
   }
-  return orderStore.create(payload);
+  return orderStore.create({ ...payload, id: job.id });
 }
 
 export async function markStudentOrderPaidFromShopify({
@@ -274,7 +274,7 @@ export async function markStudentOrderPaidFromShopify({
     });
   }
 
-  return orderStore.create(payload);
+  return orderStore.create({ ...payload, id: jobId });
 }
 
 export async function registerContactSubmission({ name, email, phone, message }) {

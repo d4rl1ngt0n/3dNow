@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { next3dnId } from '../utils/ids.js';
 import { config } from '../config.js';
 
 const STORE_PATH = path.join(config.dataDir, 'orders.json');
@@ -153,8 +153,9 @@ export const orderStore = {
     const orders = await ensureLoaded();
     const now = new Date().toISOString();
     const status = ORDER_STATUSES.includes(input.status) ? input.status : 'new';
+    const id = input.id || await next3dnId();
     const order = {
-      id: input.id || randomUUID(),
+      id,
       createdAt: now,
       updatedAt: now,
       type: input.type,
