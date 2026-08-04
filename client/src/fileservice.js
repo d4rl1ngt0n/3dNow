@@ -2,8 +2,10 @@ import './styles.css';
 import {
   applyLangAttributes,
   bindLangSwitch,
+  getLang,
   persistLang,
-  readStoredLang
+  readStoredLang,
+  t
 } from './lang.js';
 
 const embedMode = new URLSearchParams(window.location.search).has('embed')
@@ -14,7 +16,6 @@ if (embedMode) {
 }
 
 const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => [...document.querySelectorAll(selector)];
 const form = $('#idea-form');
 const status = $('#idea-status');
 const ok = $('#idea-ok');
@@ -50,9 +51,7 @@ deadlineInput?.addEventListener('change', () => {
   if (deadlineInput.value && deadlineInput.value < deadlineInput.min) {
     deadlineInput.value = '';
     deadlineInput.setCustomValidity(
-      document.documentElement.lang === 'en'
-        ? 'Choose a future date.'
-        : 'Bitte ein Datum in der Zukunft wählen.'
+      t('Choose a future date.', 'Bitte ein Datum in der Zukunft wählen.')
     );
   } else {
     deadlineInput.setCustomValidity('');
@@ -91,18 +90,15 @@ hamburger?.addEventListener('click', () => {
   hamburger.setAttribute(
     'aria-label',
     isOpen
-      ? (document.documentElement.lang === 'en' ? 'Close navigation menu' : 'Menü schließen')
-      : (document.documentElement.lang === 'en' ? 'Open navigation menu' : 'Menü öffnen')
+      ? t('Close navigation menu', 'Menü schließen')
+      : t('Open navigation menu', 'Menü öffnen')
   );
 });
 
 mobileMenu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
   mobileMenu.classList.remove('is-open');
   hamburger?.setAttribute('aria-expanded', 'false');
-  hamburger?.setAttribute(
-    'aria-label',
-    document.documentElement.lang === 'en' ? 'Open navigation menu' : 'Menü öffnen'
-  );
+  hamburger?.setAttribute('aria-label', t('Open navigation menu', 'Menü öffnen'));
 }));
 
 function updateFileLabel() {
@@ -112,8 +108,7 @@ function updateFileLabel() {
     fileLabel.textContent = file.name;
     dropzone?.classList.add('has-file');
   } else {
-    const lang = document.documentElement.lang === 'en' ? 'en' : 'de';
-    fileLabel.textContent = fileLabel.getAttribute(`data-${lang}`) || fileLabel.textContent;
+    fileLabel.textContent = fileLabel.getAttribute(`data-${getLang()}`) || fileLabel.textContent;
     dropzone?.classList.remove('has-file');
   }
 }
@@ -141,6 +136,14 @@ dropzone?.addEventListener('drop', (event) => {
   updateFileLabel();
 });
 
+function setStatus(en, de, type = '') {
+  if (!status) return;
+  status.setAttribute('data-en', en);
+  status.setAttribute('data-de', de);
+  status.textContent = t(en, de);
+  status.className = type ? `idea-status ${type}` : 'idea-status';
+}
+
 form?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!form) return;
@@ -153,36 +156,37 @@ form?.addEventListener('submit', async (event) => {
   const deadline = deadlineInput?.value || '';
   const quantity = Number(quantityInput?.value || 0);
   const file = fileInput?.files?.[0] || null;
-  const isEn = document.documentElement.lang === 'en';
 
   if (!name || !email || !description) {
-    status.textContent = isEn
-      ? 'Please fill in name, email and description.'
-      : 'Bitte Name, E-Mail und Beschreibung ausfüllen.';
-    status.className = 'idea-status is-error';
+    setStatus(
+      'Please fill in name, email and description.',
+      'Bitte Name, E-Mail und Beschreibung ausfüllen.',
+      'is-error'
+    );
     ok.hidden = true;
     return;
   }
   if (!Number.isInteger(quantity) || quantity < 1) {
-    status.textContent = isEn
-      ? 'Enter how many prints you need (at least 1).'
-      : 'Bitte die Anzahl der Drucke angeben (mindestens 1).';
-    status.className = 'idea-status is-error';
+    setStatus(
+      'Enter how many prints you need (at least 1).',
+      'Bitte die Anzahl der Drucke angeben (mindestens 1).',
+      'is-error'
+    );
     ok.hidden = true;
     return;
   }
   if (deadline && deadline < (deadlineInput?.min || tomorrowIsoDate())) {
-    status.textContent = isEn
-      ? 'Preferred deadline must be a future date.'
-      : 'Der Wunschtermin muss in der Zukunft liegen.';
-    status.className = 'idea-status is-error';
+    setStatus(
+      'Preferred deadline must be a future date.',
+      'Der Wunschtermin muss in der Zukunft liegen.',
+      'is-error'
+    );
     ok.hidden = true;
     return;
   }
 
   submit.disabled = true;
-  status.textContent = isEn ? 'Sending…' : 'Wird gesendet…';
-  status.className = 'idea-status';
+  setStatus('Sending…', 'Wird gesendet…');
   ok.hidden = true;
 
   try {
@@ -197,7 +201,9 @@ form?.addEventListener('submit', async (event) => {
 
     const response = await fetch('/api/submissions/idea', { method: 'POST', body });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || (isEn ? 'Could not send.' : 'Senden fehlgeschlagen.'));
+    if (!response.ok) {
+      throw new Error(payload.error || t('Could not send.', 'Senden fehlgeschlagen.'));
+    }
 
     form.reset();
     if (quantityInput) quantityInput.value = '1';
@@ -205,20 +211,27 @@ form?.addEventListener('submit', async (event) => {
     updateFileLabel();
     const ref = payload.orderNumber ? String(payload.orderNumber).toUpperCase() : '';
     if (ref) {
-      ok.textContent = isEn
-        ? `Thanks, we received your idea (${ref}) and will get back to you with the next steps.`
-        : `Danke, wir haben deine Idee erhalten (${ref}) und melden uns mit den nächsten Schritten.`;
+      const en = `Thanks, we received your idea (${ref}) and will get back to you with the next steps.`;
+      const de = `Danke, wir haben deine Idee erhalten (${ref}) und melden uns mit den nächsten Schritten.`;
+      ok.setAttribute('data-en', en);
+      ok.setAttribute('data-de', de);
+      ok.textContent = t(en, de);
     } else {
-      ok.textContent = ok.getAttribute(isEn ? 'data-en' : 'data-de')
-        || (isEn
-          ? 'Thanks, we received your idea and will get back to you with the next steps.'
-          : 'Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.');
+      const en = "Thanks, we've received your idea and will get back to you with the next steps.";
+      const de = 'Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.';
+      ok.setAttribute('data-en', en);
+      ok.setAttribute('data-de', de);
+      ok.textContent = t(en, de);
     }
     status.textContent = '';
+    status.removeAttribute('data-en');
+    status.removeAttribute('data-de');
     ok.hidden = false;
   } catch (error) {
-    status.textContent = error.message || (isEn ? 'Could not send.' : 'Senden fehlgeschlagen.');
-    status.className = 'idea-status is-error';
+    const fallbackEn = 'Could not send.';
+    const fallbackDe = 'Senden fehlgeschlagen.';
+    const message = error.message || fallbackEn;
+    setStatus(message, message === fallbackEn ? fallbackDe : message, 'is-error');
   } finally {
     submit.disabled = false;
   }

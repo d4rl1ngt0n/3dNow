@@ -26,12 +26,12 @@ function setBilingual(node, en, de, { html = false } = {}) {
 }
 
 setBilingual(introEyebrow, 'For businesses & startups', 'Für Unternehmen & Startups');
-setBilingual(introHeading, 'Build your <em>production request.</em>', 'Erstelle deine <em>Produktionsanfrage.</em>', { html: true });
+setBilingual(introHeading, 'Build your production request.', 'Stellen Sie Ihre Produktionsanfrage zusammen.');
 if (introCopy) {
   setBilingual(
     introCopy,
-    'Drop your sliced file. We read the verified print time and weight, then you choose material, colour and quantity. We review the file and send back pricing for your project, from a single prototype to small-batch production. No payment is taken until you approve the quote.',
-    'Lade deine geschnittene Datei hoch. Wir lesen Druckzeit und Gewicht aus, dann wählst du Material, Farbe und Stückzahl. Wir prüfen die Datei und senden dir den Preis, vom einzelnen Prototyp bis zur Kleinserie. Zahlung erst nach Freigabe des Angebots.'
+    'Upload your model or part, choose material and colour, and tell us the quantity you need. We review the file and send back pricing for your project, from a single prototype to small-batch production. No payment is taken until you approve the quote.',
+    'Laden Sie Ihr Modell oder Bauteil hoch, wähle Material und Farbe und geben Sie die gewünschte Stückzahl an. Wir prüfen die Datei und senden Ihnen ein maßgeschneidertes Angebot.'
   );
   let note = document.querySelector('.business-intro-note');
   if (!note) {
@@ -46,6 +46,8 @@ if (introCopy) {
   );
 }
 if (studentProjects) studentProjects.hidden = true;
+const businessContent = document.querySelector('#business-content');
+if (businessContent) businessContent.hidden = false;
 if (packageOptions) packageOptions.hidden = true;
 
 function setStep(field, number, en, de) {
@@ -123,7 +125,7 @@ const engineeringField = engineeringOptions?.closest('fieldset') || document.que
 const contactField = contactOptions?.closest('fieldset') || document.querySelector('#contact-field');
 const quantityFieldNode = document.querySelector('#quantity-field');
 
-// Visual order: Quantity → Speed → Engineering → Contact
+// Visual order: Quantity → Speed (05) → Engineering (06) → Contact (07)
 if (requestPanel && quantityFieldNode && speedField && engineeringField && contactField) {
   requestPanel.prepend(quantityFieldNode);
   quantityFieldNode.after(speedField);
@@ -131,6 +133,7 @@ if (requestPanel && quantityFieldNode && speedField && engineeringField && conta
   engineeringField.after(contactField);
 }
 
+setStep(quantityFieldNode, '04', 'Quantity', 'Stückzahl');
 setStep(speedField, '05', 'Production speed', 'Bis wann soll es fertig gedruckt sein?');
 if (speedOptions) {
   const badge = speedOptions.querySelector('[data-speed="priority"] .option-badge');
@@ -178,12 +181,20 @@ if (engineeringField && !document.querySelector('#file-editing-terms')) {
 
 if (verificationOptions) verificationOptions.closest('fieldset').hidden = true;
 setStep(contactField, '07', 'Contact details', 'Kontaktdaten');
+const contactUpdatesNote = document.querySelector('#contact-updates-note');
+if (contactUpdatesNote) {
+  setBilingual(
+    contactUpdatesNote,
+    "We'll send your order updates here, so please make sure it's correct and up to date.",
+    'Wir senden Ihre Bestellinfos hierhin – bitte stellen Sie sicher, dass die Angabe korrekt und aktuell ist.'
+  );
+}
 
 const packageRow = document.querySelector('#summary-package')?.closest('div');
 const packageLabel = packageRow?.querySelector('dt');
 if (packageLabel) setBilingual(packageLabel, 'Quantity', 'Stückzahl');
 
-document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+document.querySelectorAll('#summary-checkout, #mobile-checkout-button, #submit-request').forEach(button => {
   setBilingual(button, 'Request a quote', 'Angebot anfragen');
 });
 const summaryHint = document.querySelector('#summary-hint');
@@ -191,9 +202,28 @@ if (summaryHint) {
   setBilingual(summaryHint, 'Add your email or phone number to continue.', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
 }
 
+function applyBusinessLabels() {
+  setStep(quantityFieldNode, '04', 'Quantity', 'Stückzahl');
+  setStep(speedField, '05', 'Production speed', 'Bis wann soll es fertig gedruckt sein?');
+  setStep(engineeringField, '06', 'Engineering support', 'Konstruktionshilfe');
+  setStep(contactField, '07', 'Contact details', 'Kontaktdaten');
+  const badge = speedOptions?.querySelector('[data-speed="priority"] .option-badge');
+  if (badge) setBilingual(badge, 'Most selected', 'Beliebteste Wahl');
+  const priorityTitle = speedOptions?.querySelector('[data-speed="priority"] strong');
+  if (priorityTitle) setBilingual(priorityTitle, 'Priority', 'Priorität');
+  document.querySelectorAll('#summary-checkout, #mobile-checkout-button, #submit-request').forEach(button => {
+    setBilingual(button, 'Request a quote', 'Angebot anfragen');
+  });
+  if (summaryHint) {
+    setBilingual(summaryHint, 'Add your email or phone number to continue.', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
+  }
+}
+
 applyLangAttributes(getLang());
+applyBusinessLabels();
 window.addEventListener('3dnow:lang', () => {
   document.title = t('3DNow Business 3D Print Quote Engine', '3DNow Business 3D-Druck Angebot');
+  applyBusinessLabels();
 });
 
 function selectedValue(selector, attribute, fallback = null) {
@@ -206,7 +236,9 @@ function renderEstimate() {
   const status = document.querySelector('#request-status');
   const prototype = quantity === 1;
   const cta = t('Request a quote', 'Angebot anfragen');
-  document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+  document.querySelectorAll('#summary-checkout, #mobile-checkout-button, #submit-request').forEach(button => {
+    button.setAttribute('data-en', 'Request a quote');
+    button.setAttribute('data-de', 'Angebot anfragen');
     button.textContent = cta;
   });
   if (!quote) return;

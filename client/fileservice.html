@@ -48,7 +48,7 @@
       <a href="/quote-engine-students" data-en="For Students" data-de="Studierende">Studierende</a>
       <a href="/quote-engine-business" data-en="For Businesses &amp; Startups" data-de="Unternehmen &amp; Startups">Unternehmen &amp; Startups</a>
       <a href="/quote-engine-private" data-en="For Private Customers" data-de="Privatkund:innen">Privatkund:innen</a>
-      <a href="/quote-engine-fileservice" data-en="No 3D file? We design it" data-de="Keine 3D-Datei? Wir gestalten sie">Keine 3D-Datei? Wir gestalten sie</a>
+      <a href="/quote-engine-fileservice" data-en="No 3D file? We design it" data-de="Noch keine 3D-Druck Datei? Wir helfen dir weiter">No 3D file? We design it</a>
     </div>
     <a class="navlink" href="https://3d-now.de/pages/materials" data-en="Materials" data-de="Materialien">Materialien</a>
     <a class="navlink" href="https://3d-now.de/pages/applications" data-en="Applications" data-de="Anwendungsmöglichkeiten">Anwendungsmöglichkeiten</a>
@@ -63,15 +63,15 @@
     <section class="fs-hero">
       <a class="fs-back" href="https://3d-now.de/" data-en="← Back" data-de="← Zurück">← Zurück</a>
       <p class="eyebrow" data-en="No 3D file yet?" data-de="Noch keine 3D-Datei?">Noch keine 3D-Datei?</p>
-      <h1 data-en="No 3D file yet?" data-de="Noch keine 3D-Datei?">Noch keine 3D-Datei?</h1>
+      <h1 data-en="No 3D file? We'll help you create one." data-de="Noch keine 3D-Datei?">Noch keine 3D-Datei?</h1>
       <p class="fs-lede" data-en="Have an idea but no 3D file yet? Upload a photo, sketch or reference and tell us what you want to create. We'll review it and get back to you with the next steps." data-de="Du hast eine Idee, aber noch keine 3D-Datei? Lade ein Foto, eine Skizze oder eine Vorlage hoch und sag uns, was du erstellen möchtest. Wir prüfen es und melden uns mit den nächsten Schritten.">Du hast eine Idee, aber noch keine 3D-Datei? Lade ein Foto, eine Skizze oder eine Vorlage hoch und sag uns, was du erstellen möchtest. Wir prüfen es und melden uns mit den nächsten Schritten.</p>
       <p class="fs-lede" data-en="For many replacement parts, mounts and simple functional components, a photo, sketch or the broken original part can be enough to start. We check whether the geometry can be recreated for 3D printing." data-de="Bei vielen Ersatzteilen, Halterungen und einfachen Funktionsteilen reicht ein Foto, eine Skizze oder das defekte Originalteil, um zu starten. Wir prüfen, ob die Geometrie für den 3D-Druck nachgebaut werden kann.">Bei vielen Ersatzteilen, Halterungen und einfachen Funktionsteilen reicht ein Foto, eine Skizze oder das defekte Originalteil, um zu starten. Wir prüfen, ob die Geometrie für den 3D-Druck nachgebaut werden kann.</p>
     </section>
 
-    <ol class="fs-steps" aria-label="How it works" hidden>
+    <ol class="fs-steps" aria-label="How it works">
       <li><span>01</span><strong data-en="Send a reference" data-de="Referenz senden">Referenz senden</strong></li>
       <li><span>02</span><strong data-en="We review the idea" data-de="Wir prüfen die Idee">Wir prüfen die Idee</strong></li>
-      <li><span>03</span><strong data-en="You get next steps" data-de="Du bekommst die nächsten Schritte">Du bekommst die nächsten Schritte</strong></li>
+      <li><span>03</span><strong data-en="Tell us the number of prints" data-de="Gib die Anzahl der Drucke an">Gib die Anzahl der Drucke an</strong></li>
     </ol>
 
     <section class="fileservice-panel" aria-labelledby="fs-form-heading">
@@ -107,13 +107,16 @@
           <textarea id="idea-desc" name="description" required rows="5" data-en-ph="What do you want to create? Size, use, material wishes..." data-de-ph="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…" placeholder="Was möchtest du erstellen? Größe, Verwendung, Materialwünsche…"></textarea>
         </label>
 
+        <label class="field"><span data-en="Number of prints" data-de="Anzahl der Drucke">Anzahl der Drucke</span>
+          <input id="idea-quantity" name="quantity" type="number" min="1" step="1" value="1" inputmode="numeric" required data-en-ph="1" data-de-ph="1" placeholder="1"/>
+        </label>
+
         <label class="field"><span data-en="Preferred deadline" data-de="Wunschtermin">Wunschtermin</span>
           <input id="idea-deadline" name="deadline" type="date" data-en-ph="dd.mm.yyyy" data-de-ph="tt.mm.jjjj"/>
         </label>
-        <input id="idea-quantity" name="quantity" type="hidden" value="1"/>
 
         <div class="fs-actions">
-          <button class="btn btn-primary" id="idea-submit" type="submit" data-en="Submit idea" data-de="Idee senden">Idee senden</button>
+          <button class="btn btn-primary" id="idea-submit" type="submit" data-en="Describe your idea →" data-de="Idee beschreiben →">Idee beschreiben →</button>
         </div>
         <p id="idea-status" class="idea-status" role="status" aria-live="polite"></p>
         <p id="idea-ok" class="form-ok" hidden data-en="Thanks, we've received your idea and will get back to you with the next steps." data-de="Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.">Danke, wir haben deine Idee erhalten und melden uns mit den nächsten Schritten.</p>
@@ -125,27 +128,27 @@
     <div class="wrap">
       <div class="foot-grid">
         <div class="foot-brand">
-          <a class="brand" href="https://3d-now.de/"><span class="dot" aria-hidden="true"></span>3DNow</a>
-          <p data-en="3D printing, now. From file to finished part, for students, businesses and makers across Europe." data-de="3D-Druck, jetzt. Von der Datei zum fertigen Bauteil, für Studierende, Unternehmen und Maker in ganz Europa.">3D-Druck, jetzt. Von der Datei zum fertigen Bauteil, für Studierende, Unternehmen und Maker in ganz Europa.</p>
+          <a class="brand" href="https://3d-now.de/" aria-label="3d-now.de home"><span class="brand-stack"><img class="brand-logo" src="/brand-logo" alt="3d-now.de"><span class="brand-tagline" data-en="by iFactory3D" data-de="von iFactory3D">by iFactory3D</span></span></a>
+          <p data-en="3D printing, now. From file to finished part, for students, businesses and makers across Europe." data-de="3D-Druck, jetzt. Von der Datei zum fertigen Bauteil, für Studierende, Unternehmen und Maker in ganz Europa.">3D printing, now. From file to finished part, for students, businesses and makers across Europe.</p>
         </div>
         <div class="foot-col">
-          <h2 data-en="Services" data-de="Leistungen">Leistungen</h2>
-          <a href="/quote-engine-students" data-en="For Students" data-de="Studierende">Studierende</a>
-          <a href="/quote-engine-business" data-en="For Businesses &amp; Startups" data-de="Unternehmen &amp; Startups">Unternehmen &amp; Startups</a>
-          <a href="/quote-engine-private" data-en="For Private Customers" data-de="Privatkund:innen">Privatkund:innen</a>
-          <a href="/quote-engine-fileservice" data-en="No 3D file? We design it" data-de="Keine 3D-Datei? Wir gestalten sie">Keine 3D-Datei? Wir gestalten sie</a>
+          <h4 data-en="Services" data-de="Leistungen">Services</h4>
+          <a href="/quote-engine-students" data-en="For Students" data-de="Studierende">For Students</a>
+          <a href="/quote-engine-business" data-en="For Businesses &amp; Startups" data-de="Unternehmen &amp; Startups">For Businesses &amp; Startups</a>
+          <a href="/quote-engine-private" data-en="For Private Customers" data-de="Privatkund:innen">For Private Customers</a>
+          <a href="/quote-engine-fileservice" data-en="No 3D file? We design it" data-de="Noch keine 3D-Druck Datei? Wir helfen dir weiter">No 3D file? We design it</a>
         </div>
         <div class="foot-col">
-          <h2 data-en="Explore" data-de="Entdecken">Entdecken</h2>
-          <a href="https://3d-now.de/pages/materials" data-en="Materials" data-de="Materialien">Materialien</a>
-          <a href="https://3d-now.de/pages/applications" data-en="Applications" data-de="Anwendungsmöglichkeiten">Anwendungsmöglichkeiten</a>
-          <a href="https://3d-now.de/pages/how-it-works" data-en="How it works" data-de="So funktioniert's">So funktioniert's</a>
-          <a href="https://3d-now.de/pages/about" data-en="About us" data-de="Über uns">Über uns</a>
+          <h4 data-en="Explore" data-de="Entdecken">Explore</h4>
+          <a href="https://3d-now.de/pages/materials" data-en="Materials" data-de="Materialien">Materials</a>
+          <a href="https://3d-now.de/pages/applications" data-en="Applications" data-de="Anwendungsmöglichkeiten">Applications</a>
+          <a href="https://3d-now.de/pages/how-it-works" data-en="How it works" data-de="So funktioniert's">How it works</a>
+          <a href="https://3d-now.de/pages/about" data-en="About us" data-de="Über uns">About us</a>
           <a href="https://3d-now.de/pages/faq">FAQ</a>
-          <a href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
+          <a href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Reviews</a>
         </div>
         <div class="foot-col">
-          <h2 data-en="Contact" data-de="Kontakt">Kontakt</h2>
+          <h4 data-en="Contact" data-de="Kontakt">Contact</h4>
           <a href="tel:+4921115859748">+49 211 15859748</a>
           <a href="mailto:sales@ifactory3d.com">sales@ifactory3d.com</a>
           <a href="https://wa.me/4915754285020" target="_blank" rel="noopener">WhatsApp</a>
@@ -156,13 +159,16 @@
         <span>© 2026 3d-now.de · Düsseldorf, Deutschland</span>
         <div class="legal-links">
           <a href="https://3d-now.de/pages/impressum">Impressum</a>
-          <a href="https://3d-now.de/pages/datenschutz" data-en="Privacy" data-de="Datenschutz">Datenschutz</a>
-          <a href="https://3d-now.de/pages/agb" data-en="Terms" data-de="AGB">AGB</a>
-          <a href="https://3d-now.de/pages/widerruf" data-en="Withdrawal" data-de="Widerruf">Widerruf</a>
+          <a href="https://3d-now.de/pages/datenschutz" data-en="Privacy" data-de="Datenschutz">Privacy</a>
+          <a href="https://3d-now.de/pages/agb" data-en="Terms" data-de="AGB">Terms</a>
+          <a href="https://3d-now.de/pages/widerruf" data-en="Withdrawal" data-de="Widerruf">Withdrawal</a>
         </div>
       </div>
     </div>
   </footer>
+  <a class="wa-float" href="https://wa.me/4915754285020" target="_blank" rel="noopener" aria-label="WhatsApp">
+    <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 00-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1012 2zm0 2a8 8 0 11-4.1 14.9l-.3-.2-2.8.7.8-2.7-.2-.3A8 8 0 0112 4zm4.6 9.5c-.2-.1-1.3-.7-1.5-.7-.2-.1-.3-.1-.5.1l-.6.8c-.1.1-.2.2-.4.1a6.5 6.5 0 01-3.2-2.8c-.1-.2 0-.3.1-.4l.4-.5.2-.4v-.4l-.7-1.6c-.2-.4-.3-.4-.5-.4h-.4c-.2 0-.4.1-.6.3a3 3 0 00-1 2.2c0 1.3 1 2.6 1.1 2.7.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.3-.5 1.5-1.1.2-.5.2-1 .1-1.1l-.5-.2z"/></svg>
+  </a>
 
   <script type="module" src="/src/fileservice.js"></script>
 </body>

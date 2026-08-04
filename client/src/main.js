@@ -71,15 +71,26 @@ const studentFlow = !businessFlow && !privateFlow;
 if (!studentFlow) {
   const verificationField = $('#verification-options')?.closest('fieldset');
   if (verificationField) verificationField.hidden = true;
-  document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+  document.querySelectorAll('#summary-checkout, #mobile-checkout-button, #submit-request').forEach(button => {
     if (businessFlow) {
-      button.setAttribute('data-en', 'Request prototype quote');
-      button.setAttribute('data-de', 'Prototyp-Angebot anfragen');
-    } else {
-      button.setAttribute('data-en', 'Request quote');
+      button.setAttribute('data-en', 'Request a quote');
       button.setAttribute('data-de', 'Angebot anfragen');
+      button.textContent = t('Request a quote', 'Angebot anfragen');
+    } else {
+      button.setAttribute('data-en', 'Request your price');
+      button.setAttribute('data-de', 'Preis anfragen');
+      button.textContent = t('Request your price', 'Preis anfragen');
     }
   });
+  const summaryHint = $('#summary-hint');
+  if (summaryHint && (businessFlow || privateFlow)) {
+    summaryHint.setAttribute('data-en', 'Add your email or phone number to continue.');
+    summaryHint.setAttribute('data-de', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
+    summaryHint.textContent = t(
+      'Add your email or phone number to continue.',
+      'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.'
+    );
+  }
 }
 state.preview = new Preview($('#preview'));
 
@@ -631,31 +642,37 @@ function renderOrderSummary() {
       )
       : null;
     const speedCost = request.speed === 'priority' ? 59 : request.speed === 'express' ? 39 : 0;
-    const reviewCost = request.engineering === 'review' ? 15 : 0;
-    const editingCost = request.engineering === 'editing' ? 110 : 0;
+    const reviewCost = request.engineering === 'review' ? 35 : 0;
+    const editingCost = request.engineering === 'editing' ? 89 : 0;
     const total = productionTotal != null ? Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2)) : null;
     const engineering = request.engineering === 'review'
-      ? 'Expert Review · +€15'
+      ? t('Expert Review · +€35', 'Expertenprüfung · +€35')
       : request.engineering === 'editing'
-        ? 'Editing · €110/hour'
-        : 'Not selected';
-    const cta = prototype ? 'Request prototype quote' : 'Request production quote';
-    $('#summary-total').textContent = total != null ? euro(total) : 'Pending';
-    $('#mobile-total').textContent = total != null ? euro(total) : 'Pending';
+        ? t('Editing · €89/hour', 'Bearbeitung · 89 €/Stunde')
+        : t('Not selected', 'Nicht gewählt');
+    const cta = t('Request a quote', 'Angebot anfragen');
+    $('#summary-total').textContent = total != null ? euro(total) : t('Pending', 'Ausstehend');
+    $('#mobile-total').textContent = total != null ? euro(total) : t('Pending', 'Ausstehend');
     $('#summary-subtitle').textContent = quote
-      ? (prototype ? 'Single prototype estimate' : `Production estimate for ${quantity} pieces`)
-      : 'Upload a file to calculate your production estimate.';
-    $('#summary-file').textContent = state.file?.name || 'Not uploaded';
-    $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : 'Pending';
-    $('#summary-package').textContent = prototype ? '1 prototype' : `${quantity} pieces`;
+      ? (prototype
+        ? t('Single prototype estimate', 'Schätzung für einzelnen Prototyp')
+        : t(`Production estimate for ${quantity} pieces`, `Produktionsschätzung für ${quantity} Stück`))
+      : t('Upload a file to calculate your production estimate.', 'Lade eine Datei hoch, um deine Produktionsschätzung zu berechnen.');
+    $('#summary-file').textContent = state.file?.name || t('Not uploaded', 'Nicht hochgeladen');
+    $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : t('Pending', 'Ausstehend');
+    $('#summary-package').textContent = prototype
+      ? t('1 prototype', '1 Prototyp')
+      : t(`${quantity} pieces`, `${quantity} Stück`);
     $('#summary-material').textContent = displayMaterial();
     $('#summary-speed').textContent = request.speed === 'priority'
-      ? 'Priority · 2-3 days · +€59'
+      ? t('Priority · 2–3 days · +€59', 'Priorität · 2–3 Tage · +€59')
       : request.speed === 'express'
-        ? 'Express · 4-6 days · +€39'
-        : 'Standard · 7-10 days';
+        ? t('Express · 4–6 days · +€39', 'Express · 4–6 Tage · +€39')
+        : t('Standard · 7–10 days', 'Standard · 7–10 Tage');
     $('#summary-engineering').textContent = engineering;
-    document.querySelectorAll('#summary-checkout, #mobile-checkout-button').forEach(button => {
+    document.querySelectorAll('#summary-checkout, #mobile-checkout-button, #submit-request').forEach(button => {
+      button.setAttribute('data-en', 'Request a quote');
+      button.setAttribute('data-de', 'Angebot anfragen');
       button.textContent = cta;
     });
     $('#summary-checkout').disabled = !ready;

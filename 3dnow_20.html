@@ -155,20 +155,21 @@
   .sw{display:flex;flex-direction:column;gap:9px;align-items:center;text-align:center}
   .sw .chip{width:64px;height:64px;border-radius:50%;border:1px solid var(--line)}
   .sw .nm{font-family:var(--font-mono);font-size:.74rem;color:var(--muted);letter-spacing:.04em}
-  .team-lede{max-width:66ch;margin-top:20px}
-  .team-lede p{color:var(--bone);font-size:1.02rem;line-height:1.75;margin-top:16px}
+  .team-lede{max-width:none;margin-top:14px}
+  .team-lede p{color:var(--bone);font-size:1.02rem;line-height:1.75;margin-top:12px}
   .team-lede p:first-child{margin-top:0}
-  .team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:36px;align-items:start}
+  .team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px;align-items:start}
   .team-card{display:flex;flex-direction:column;border:0;background:transparent;overflow:visible}
   .team-card:hover{transform:none}
   .team-photo{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:center;display:block;background:var(--surface-2);border-radius:16px}
-  .team-info,.team-meta{padding:18px 4px 0}
+  .team-info,.team-meta{padding:14px 2px 0}
   .team-name,.team-info h3,.team-meta h3{display:block;font-family:var(--font-display);font-weight:700;font-size:1.18rem;letter-spacing:-.01em;color:var(--bone);margin:0}
   .team-role{display:block;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-top:6px}
-  .team-bio{color:var(--muted);font-size:.92rem;line-height:1.62;margin-top:14px}
-  #page-about .section{padding:32px 0 56px}
+  .team-bio{color:var(--muted);font-size:.92rem;line-height:1.62;margin-top:12px}
+  #page-about .section-head{max-width:none}
+  #page-about .section{padding:24px 0 48px}
   @media(max-width:880px){.team-grid{grid-template-columns:1fr;max-width:430px;margin-left:auto;margin-right:auto;gap:20px}}
-
+  @media(max-width:979px){#page-about .section{padding:20px 0 40px}}
   .app-group{margin-top:48px;scroll-margin-top:96px}
   #page-applications .app-jumps{gap:10px 18px;margin-top:10px}
   #page-applications .app-jumps .chip-btn{
@@ -815,7 +816,7 @@
       <div class="home-process-line" aria-hidden="true"><span></span></div>
       <article class="home-process-step">
         <div class="process-node" aria-hidden="true"><span>01</span></div>
-        <div class="process-card"><h3 data-en="Upload" data-de="Hochladen">Hochladen</h3><p data-en="Drop your STL, STEP, OBJ or 3MF file. We instantly estimate the weight and show your package." data-de="Lade deine STL-, STEP-, OBJ- oder 3MF-Datei hoch. Wir berechnen das Gewicht und zeigen dir das passende Leistungspaket.">Lade deine STL-, STEP-, OBJ- oder 3MF-Datei hoch. Wir berechnen das Gewicht und zeigen dir das passende Leistungspaket.</p></div>
+        <div class="process-card"><h3 data-en="Upload" data-de="Hochladen">Hochladen</h3><p data-en="Drop your STL, STEP, OBJ or 3MF file. We instantly estimate the weight and show your package." data-de="Lade deine STL, STEP, OBJ oder 3MF-Datei hoch. Wir berechnen das Gewicht und zeigen dir das passende Leistungspaket.">Lade deine STL, STEP, OBJ oder 3MF-Datei hoch. Wir berechnen das Gewicht und zeigen dir das passende Leistungspaket.</p></div>
       </article>
       <article class="home-process-step">
         <div class="process-node" aria-hidden="true"><span>02</span></div>
@@ -1410,7 +1411,7 @@
       </article>
       <article class="timeline-step timeline-right">
         <div></div><div class="timeline-node" aria-hidden="true"><span></span></div>
-        <div class="timeline-card"><span class="timeline-kicker">02</span><h3 data-en="Upload your file, or describe your idea" data-de="Datei hochladen oder Idee beschreiben">Datei hochladen oder Idee beschreiben</h3><p data-en="Drop your STL, STEP, OBJ or 3MF file. No 3D file yet? Send a photo, sketch or reference and we'll create the model. Your upload stays private and confidential." data-de="Lade deine STL-, STEP-, OBJ- oder 3MF-Datei hoch. Noch keine 3D-Datei? Sende ein Foto, eine Skizze oder eine Vorlage, und wir erstellen das Modell. Dein Upload bleibt privat und vertraulich.">Lade deine STL-, STEP-, OBJ- oder 3MF-Datei hoch. Noch keine 3D-Datei? Sende ein Foto, eine Skizze oder eine Vorlage, und wir erstellen das Modell. Dein Upload bleibt privat und vertraulich.</p></div>
+        <div class="timeline-card"><span class="timeline-kicker">02</span><h3 data-en="Upload your file, or describe your idea" data-de="Datei hochladen oder Idee beschreiben">Datei hochladen oder Idee beschreiben</h3><p data-en="Drop your STL, STEP, OBJ or 3MF file. No 3D file yet? Send a photo, sketch or reference and we'll create the model. Your upload stays private and confidential." data-de="Lade deine STL, STEP, OBJ oder 3MF-Datei hoch. Noch keine 3D-Datei? Sende ein Foto, eine Skizze oder eine Vorlage, und wir erstellen das Modell. Dein Upload bleibt privat und vertraulich.">Lade deine STL, STEP, OBJ oder 3MF-Datei hoch. Noch keine 3D-Datei? Sende ein Foto, eine Skizze oder eine Vorlage, und wir erstellen das Modell. Dein Upload bleibt privat und vertraulich.</p></div>
       </article>
       <article class="timeline-step timeline-left">
         <div class="timeline-card"><span class="timeline-kicker">03</span><h3 data-en="Choose material & colour" data-de="Material und Farbe auswählen">Material und Farbe auswählen</h3><p data-en="Choose PLA, PETG, ABS or TPU, or select 'Not sure' and we'll recommend a suitable material. Then choose your colour." data-de="Wähle PLA, PETG, ABS oder TPU. Wenn du unsicher bist, empfehlen wir dir ein passendes Material. Anschließend wählst du die Farbe.">Wähle PLA, PETG, ABS oder TPU. Wenn du unsicher bist, empfehlen wir dir ein passendes Material. Anschließend wählst du die Farbe.</p></div>

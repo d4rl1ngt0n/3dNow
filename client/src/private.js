@@ -77,6 +77,14 @@ if (colourField && !document.querySelector('#private-quantity-field')) {
 setStep(contactField, '05', 'Contact details', 'Kontaktdaten');
 const contactEmailSmall = contactField?.querySelector('[data-contact="email"] small');
 if (contactEmailSmall) setBilingual(contactEmailSmall, 'Get updates by email', 'Updates per E-Mail erhalten');
+const contactUpdatesNote = document.querySelector('#contact-updates-note');
+if (contactUpdatesNote) {
+  setBilingual(
+    contactUpdatesNote,
+    "We'll send your price to this contact, so please make sure it's correct and up to date.",
+    'Wir schicken dir dein persönliches Preisangebot hierhin – bitte stell sicher, dass deine Informationen korrekt und aktuell sind.'
+  );
+}
 
 const requestHeading = document.querySelector('#request-options-heading');
 setBilingual(requestHeading, 'Print and contact details', 'Druck- und Kontaktdaten');
