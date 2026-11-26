@@ -83,5 +83,9 @@ export const config = {
   },
   admin: {
     password: process.env.ADMIN_PASSWORD || ''
+  },
+  turnstile: {
+    siteKey: process.env.TURNSTILE_SITE_KEY || '',
+    secretKey: process.env.TURNSTILE_SECRET_KEY || ''
   }
 };

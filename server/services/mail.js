@@ -202,6 +202,7 @@ export async function sendCustomerBusinessQuoteConfirmation({ email, filename, t
       orderNumberLine(orderNumber),
       `File: ${filename}`,
       `Estimated production price: ${totalFormatted || 'Pending review'}`,
+      'Price includes 19% VAT. Shipping is free.',
       '',
       'We will review your file and production requirements, then contact you with the final quote. No payment is requested until you approve it.',
       '',

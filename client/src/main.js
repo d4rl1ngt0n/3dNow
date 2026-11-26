@@ -84,12 +84,12 @@ if (!studentFlow) {
   });
   const summaryHint = $('#summary-hint');
   if (summaryHint && (businessFlow || privateFlow)) {
+    setSummaryHint(
+      t('Add your email or phone number to continue.', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.'),
+      { blocker: true }
+    );
     summaryHint.setAttribute('data-en', 'Add your email or phone number to continue.');
     summaryHint.setAttribute('data-de', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
-    summaryHint.textContent = t(
-      'Add your email or phone number to continue.',
-      'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.'
-    );
   }
 }
 state.preview = new Preview($('#preview'));
@@ -446,8 +446,8 @@ function drawMetrics(metrics, quote) {
       : 'Unsliced files are reviewed manually. A sliced G-code or 3MF gives clearer production details.';
   } else if (businessFlow) {
     $('#metric-note').textContent = quote
-      ? 'Production estimate is based on verified print time, printer rate, and your requested quantity.'
-      : 'Business estimates need a sliced G-code or a 3MF with embedded G-code (verified print time and printer).';
+      ? 'Production estimate is based on verified weight, print time, material, machine rate, security factor, and quantity.'
+      : 'Business estimates need verified weight and print time from sliced G-code or a 3MF with embedded G-code.';
   } else if (metrics.confidence === 'header' || metrics.source === 'slicer' || metrics.source === 'gcode' || metrics.source === '3mf-gcode') {
     $('#metric-note').textContent = 'Sliced metadata is verified for an automatic student quote.';
   } else if (metrics.confidence === 'partial') {
@@ -590,6 +590,86 @@ function summaryHintText(values = requestValues()) {
   return missing.join(' · ');
 }
 
+function setSummaryHint(text, { blocker = false } = {}) {
+  const el = $('#summary-hint');
+  if (!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('is-blocker', Boolean(blocker && text));
+}
+
+function setSummaryPriceNote(text = '') {
+  const el = $('#summary-price-note');
+  if (!el) return;
+  if (text) {
+    el.hidden = false;
+    el.textContent = text;
+  } else {
+    el.hidden = true;
+    el.textContent = '';
+  }
+}
+
+function setSummaryQtyCard({
+  visible = false,
+  unitPrice = null,
+  quantity = 1,
+  total = null,
+  editingNote = false
+} = {}) {
+  const card = $('#summary-qty-card');
+  if (!card) return;
+  card.hidden = !visible;
+  if (!visible) return;
+
+  const unitEl = $('#summary-unit-price');
+  const totalEl = $('#summary-qty-total');
+  const labelEl = $('#summary-qty-total-label');
+  const noteEl = $('#summary-qty-note');
+  const input = $('#summary-quantity');
+  const dec = $('#summary-qty-dec');
+  const inc = $('#summary-qty-inc');
+
+  if (unitEl) unitEl.textContent = unitPrice != null ? euro(unitPrice) : '—';
+  if (totalEl) totalEl.textContent = total != null ? euro(total) : '—';
+  if (labelEl) {
+    labelEl.textContent = quantity === 1
+      ? t('Total for 1 piece', 'Summe für 1 Stück')
+      : t(`Total for ${quantity} pieces`, `Summe für ${quantity} Stück`);
+    labelEl.setAttribute('data-en', quantity === 1 ? 'Total for 1 piece' : `Total for ${quantity} pieces`);
+    labelEl.setAttribute('data-de', quantity === 1 ? 'Summe für 1 Stück' : `Summe für ${quantity} Stück`);
+  }
+  if (noteEl) {
+    noteEl.textContent = editingNote
+      ? t(
+        'Incl. 19% VAT · free shipping. First hour of file editing included; more time needs your approval.',
+        'Inkl. 19% MwSt. · kostenloser Versand. Erste Stunde Dateibearbeitung inklusive; mehr Zeit braucht deine Freigabe.'
+      )
+      : t('Incl. 19% VAT · free shipping', 'Inkl. 19% MwSt. · kostenloser Versand');
+  }
+  if (input && document.activeElement !== input) {
+    input.value = String(Math.max(1, quantity || 1));
+  }
+  if (input) {
+    input.readOnly = false;
+    input.disabled = false;
+  }
+  if (dec) dec.disabled = quantity <= 1;
+  if (inc) inc.disabled = false;
+}
+
+function businessPriceNoteText(unitPrice, editingCost = 0) {
+  if (unitPrice == null || !Number.isFinite(unitPrice)) return '';
+  return editingCost
+    ? t(
+      `Incl. 19% VAT · free shipping · €${unitPrice.toFixed(2)} / piece. First hour of file editing included; more time needs your approval.`,
+      `Inkl. 19% MwSt. · kostenloser Versand · €${unitPrice.toFixed(2)} / Stück. Erste Stunde Dateibearbeitung inklusive; mehr Zeit braucht deine Freigabe.`
+    )
+    : t(
+      `Incl. 19% VAT · free shipping · €${unitPrice.toFixed(2)} / piece.`,
+      `Inkl. 19% MwSt. · kostenloser Versand · €${unitPrice.toFixed(2)} / Stück.`
+    );
+}
+
 function showSuccessToast(message = "Thanks, we've received your request. We will get back to you with the next steps.") {
   const toast = $('#success-toast');
   if (!toast) return;
@@ -638,13 +718,16 @@ function renderOrderSummary() {
     const productionTotal = quote
       ? Number(
         quote.productionTotal
-          ?? (quote.total - (quote.speedCost || 0) - (quote.reviewCost || 0) - (quote.editingCost || 0))
+          ?? ((quote.netTotal ?? quote.total) - (quote.speedCost || 0) - (quote.reviewCost || 0) - (quote.editingCost || 0))
       )
       : null;
     const speedCost = request.speed === 'priority' ? 59 : request.speed === 'express' ? 39 : 0;
     const reviewCost = request.engineering === 'review' ? 35 : 0;
     const editingCost = request.engineering === 'editing' ? 89 : 0;
-    const total = productionTotal != null ? Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2)) : null;
+    const netTotal = productionTotal != null ? Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2)) : null;
+    const vatAmount = netTotal != null ? Number((netTotal * (quote?.vatRate ?? 0.19)).toFixed(2)) : null;
+    const total = netTotal != null ? Number((netTotal + vatAmount).toFixed(2)) : null;
+    const unitPrice = total != null ? Number((total / Math.max(1, quantity)).toFixed(2)) : null;
     const engineering = request.engineering === 'review'
       ? t('Expert Review · +€35', 'Expertenprüfung · +€35')
       : request.engineering === 'editing'
@@ -654,9 +737,7 @@ function renderOrderSummary() {
     $('#summary-total').textContent = total != null ? euro(total) : t('Pending', 'Ausstehend');
     $('#mobile-total').textContent = total != null ? euro(total) : t('Pending', 'Ausstehend');
     $('#summary-subtitle').textContent = quote
-      ? (prototype
-        ? t('Single prototype estimate', 'Schätzung für einzelnen Prototyp')
-        : t(`Production estimate for ${quantity} pieces`, `Produktionsschätzung für ${quantity} Stück`))
+      ? t('Total due', 'Gesamtsumme')
       : t('Upload a file to calculate your production estimate.', 'Lade eine Datei hoch, um deine Produktionsschätzung zu berechnen.');
     $('#summary-file').textContent = state.file?.name || t('Not uploaded', 'Nicht hochgeladen');
     $('#summary-weight').textContent = state.metrics?.weightG != null ? `${state.metrics.weightG.toFixed(0)} g` : t('Pending', 'Ausstehend');
@@ -677,7 +758,15 @@ function renderOrderSummary() {
     });
     $('#summary-checkout').disabled = !ready;
     $('#mobile-checkout-button').disabled = !ready;
-    $('#summary-hint').textContent = summaryHintText(values);
+    setSummaryPriceNote('');
+    setSummaryQtyCard({
+      visible: total != null,
+      unitPrice,
+      quantity,
+      total,
+      editingNote: Boolean(editingCost)
+    });
+    setSummaryHint(summaryHintText(values), { blocker: !ready });
     return;
   }
   if (privateFlow) {
@@ -696,7 +785,9 @@ function renderOrderSummary() {
     });
     $('#summary-checkout').disabled = !ready;
     $('#mobile-checkout-button').disabled = !ready;
-    $('#summary-hint').textContent = summaryHintText(values);
+    setSummaryPriceNote('');
+    setSummaryQtyCard({ visible: false });
+    setSummaryHint(summaryHintText(values), { blocker: !ready });
     return;
   }
   const base = packagePrices[state.packageSelection] ?? quote?.total ?? 39;
@@ -736,7 +827,9 @@ function renderOrderSummary() {
   updateStudentEditingTerms();
   $('#summary-checkout').disabled = !ready;
   $('#mobile-checkout-button').disabled = !ready;
-  $('#summary-hint').textContent = summaryHintText(values);
+  setSummaryPriceNote('');
+  setSummaryQtyCard({ visible: false });
+  setSummaryHint(summaryHintText(values), { blocker: !ready });
 }
 
 $('#engineering-options').addEventListener('click', event => {

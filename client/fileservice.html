@@ -32,11 +32,11 @@
           <a class="navlink" href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
           <a class="navlink" href="https://3d-now.de/pages/faq">FAQ</a>
         </div>
+        <a class="signin" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
         <div class="langswitch" role="group" aria-label="Language">
           <button type="button" data-lang="de" class="active" aria-pressed="true">DE</button>
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
-        <a class="signin" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
         <button class="hamburger" id="hamburger" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobile-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       </nav>
     </div>
@@ -57,6 +57,13 @@
     <a class="navlink" href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
     <a class="navlink" href="https://3d-now.de/pages/faq">FAQ</a>
     <a class="navlink" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
+    <div class="mobile-lang-row">
+      <span class="eyebrow muted" data-en="Language" data-de="Sprache">Sprache</span>
+      <div class="langswitch" role="group" aria-label="Language">
+        <button type="button" data-lang="de" class="active" aria-pressed="true">DE</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
   </nav>
 
   <main class="fileservice-main">
@@ -114,6 +121,13 @@
         <label class="field"><span data-en="Preferred deadline" data-de="Wunschtermin">Wunschtermin</span>
           <input id="idea-deadline" name="deadline" type="date" data-en-ph="dd.mm.yyyy" data-de-ph="tt.mm.jjjj"/>
         </label>
+
+        <label class="field hp-field" aria-hidden="true">
+          <span>Website</span>
+          <input id="idea-website" name="website" type="text" tabindex="-1" autocomplete="off"/>
+        </label>
+        <input id="idea-started" name="startedAt" type="hidden" value=""/>
+        <div id="idea-turnstile" class="cf-turnstile-slot" hidden></div>
 
         <div class="fs-actions">
           <button class="btn btn-primary" id="idea-submit" type="submit" data-en="Describe your idea →" data-de="Idee beschreiben →">Idee beschreiben →</button>

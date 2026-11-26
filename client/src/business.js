@@ -67,13 +67,13 @@ if (colourField && !document.querySelector('#quantity-field')) {
     <legend><span>04</span> <span data-en="Quantity" data-de="Stückzahl">Stückzahl</span></legend>
     <div class="option-grid option-grid-two" id="quantity-options">
       <button class="option-card is-selected" type="button" data-quantity-type="run" aria-pressed="true">
-        <span class="option-indicator"></span><span><strong data-en="Production run" data-de="Serienproduktion">Serienproduktion</strong><small data-en="Enter your target quantity below." data-de="Gib unten die gewünschte Stückzahl ein.">Gib unten die gewünschte Stückzahl ein.</small></span>
+        <span class="option-indicator"></span><span><strong data-en="Production run" data-de="Serienproduktion">Serienproduktion</strong><small data-en="Set the quantity in your result panel." data-de="Stückzahl im Ergebnispanel festlegen.">Stückzahl im Ergebnispanel festlegen.</small></span>
       </button>
       <button class="option-card" type="button" data-quantity-type="prototype" aria-pressed="false">
         <span class="option-indicator"></span><span><strong data-en="Single prototype" data-de="Einzelner Prototyp">Einzelner Prototyp</strong><small data-en="One sample to validate before a batch." data-de="Ein Musterteil zur Prüfung vor der Serienproduktion.">Ein Musterteil zur Prüfung vor der Serienproduktion.</small></span>
       </button>
     </div>
-    <label class="business-quantity-input quote-field" id="business-quantity-input"><span data-en="Number of prints needed" data-de="Benötigte Stückzahl">Benötigte Stückzahl</span><input id="business-quantity" type="number" min="10" value="100" inputmode="numeric"></label>
+    <label class="business-quantity-input quote-field" id="business-quantity-input" hidden><span data-en="Number of prints needed" data-de="Benötigte Stückzahl">Benötigte Stückzahl</span><input id="business-quantity" type="number" min="1" value="100" inputmode="numeric"></label>
   `;
   colourField.after(quantityField);
 
@@ -87,21 +87,28 @@ if (colourField && !document.querySelector('#quantity-field')) {
       return;
     }
     quantityInput.readOnly = false;
-    quantityInput.min = '10';
-    if (Number(quantityInput.value) < 10) quantityInput.value = '10';
-    quantityInput.setCustomValidity(Number(quantityInput.value) < 10 ? t('Production runs start at 10 pieces.', 'Produktionsserien starten ab 10 Stück.') : '');
+    quantityInput.min = '1';
+    if (Number(quantityInput.value) < 1) quantityInput.value = '1';
+    quantityInput.setCustomValidity(Number(quantityInput.value) < 1 ? t('Enter at least one print.', 'Mindestens einen Druck angeben.') : '');
+  };
+  const selectQuantityType = isRun => {
+    quantityField.querySelectorAll('.option-card').forEach(option => {
+      const selected = isRun
+        ? option.dataset.quantityType === 'run'
+        : option.dataset.quantityType === 'prototype';
+      option.classList.toggle('is-selected', selected);
+      option.setAttribute('aria-pressed', String(selected));
+    });
+    syncQuantityMode(isRun);
   };
   syncQuantityMode(true);
 
   quantityField.querySelectorAll('.option-card').forEach(card => {
     card.addEventListener('click', () => {
       const isRun = card.dataset.quantityType === 'run';
-      quantityField.querySelectorAll('.option-card').forEach(option => {
-        const selected = option === card;
-        option.classList.toggle('is-selected', selected);
-        option.setAttribute('aria-pressed', String(selected));
-      });
-      syncQuantityMode(isRun);
+      const wasPrototype = quantityField.querySelector('[data-quantity-type="prototype"]')?.classList.contains('is-selected');
+      selectQuantityType(isRun);
+      if (isRun && wasPrototype && Number(quantityInput.value) <= 1) quantityInput.value = '100';
       refreshEstimate();
     });
   });
@@ -110,12 +117,44 @@ if (colourField && !document.querySelector('#quantity-field')) {
     const input = event.currentTarget;
     const isRun = quantityField.querySelector('[data-quantity-type="run"]')?.classList.contains('is-selected');
     if (isRun) {
-      input.setCustomValidity(!input.value || Number(input.value) < 10 ? t('Production runs start at 10 pieces.', 'Produktionsserien starten ab 10 Stück.') : '');
+      input.setCustomValidity(!input.value || Number(input.value) < 1 ? t('Enter at least one print.', 'Mindestens einen Druck angeben.') : '');
     } else {
       input.value = '1';
       input.setCustomValidity('');
     }
     refreshEstimate();
+  });
+
+  const applySummaryQuantity = nextValue => {
+    const qty = Math.max(1, Math.floor(Number(nextValue)) || 1);
+    if (qty > 1) selectQuantityType(true);
+    quantityInput.value = String(qty);
+    quantityInput.setCustomValidity('');
+    refreshEstimate();
+  };
+
+  const summaryQty = document.querySelector('#summary-quantity');
+  const summaryDec = document.querySelector('#summary-qty-dec');
+  const summaryInc = document.querySelector('#summary-qty-inc');
+  summaryQty?.addEventListener('input', event => {
+    const value = event.currentTarget.value;
+    if (!value) return;
+    applySummaryQuantity(value);
+  });
+  summaryQty?.addEventListener('change', event => {
+    applySummaryQuantity(event.currentTarget.value || 1);
+  });
+  summaryDec?.addEventListener('click', () => {
+    applySummaryQuantity(Math.max(1, (Number(quantityInput.value) || 1) - 1));
+  });
+  summaryInc?.addEventListener('click', () => {
+    const current = Number(quantityInput.value) || 1;
+    if (current === 1 && quantityField.querySelector('[data-quantity-type="prototype"]')?.classList.contains('is-selected')) {
+      selectQuantityType(true);
+      applySummaryQuantity(2);
+      return;
+    }
+    applySummaryQuantity(current + 1);
   });
 }
 
@@ -245,24 +284,60 @@ function renderEstimate() {
 
   const productionTotal = Number(
     quote.productionTotal
-      ?? (quote.total - (quote.speedCost || 0) - (quote.reviewCost || 0) - (quote.editingCost || 0))
+      ?? (quote.netTotal ?? quote.total) - (quote.speedCost || 0) - (quote.reviewCost || 0) - (quote.editingCost || 0)
   );
   const speed = selectedValue('#speed-options', 'speed', 'standard');
   const engineering = selectedValue('#engineering-options', 'engineering');
   const speedCost = speed === 'priority' ? 59 : speed === 'express' ? 39 : 0;
   const reviewCost = engineering === 'review' ? 35 : 0;
   const editingCost = engineering === 'editing' ? 89 : 0;
-  const total = Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2));
+  const netTotal = Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2));
+  const vatAmount = Number((netTotal * (quote.vatRate ?? 0.19)).toFixed(2));
+  const total = Number((netTotal + vatAmount).toFixed(2));
+  const unitPrice = Number((total / Math.max(1, quantity)).toFixed(2));
 
   document.querySelector('#summary-total').textContent = `€${total.toFixed(2)}`;
   document.querySelector('#mobile-total').textContent = `€${total.toFixed(2)}`;
-  document.querySelector('#summary-subtitle').textContent = prototype
-    ? t('Single prototype estimate', 'Schätzung für Einzelprototyp')
-    : t(`Production estimate for ${quantity} pieces`, `Produktionsschätzung für ${quantity} Stück`);
+  document.querySelector('#summary-subtitle').textContent = t('Total due', 'Gesamtsumme');
   document.querySelector('#summary-package').textContent = prototype ? '1 prototype' : `${quantity} pieces`;
-  document.querySelector('#summary-hint').textContent = editingCost
-    ? t('Estimate includes the first hour of file editing. Any additional editing time requires your approval before further charges.', 'Die Schätzung enthält die erste Stunde Dateibearbeitung. Weitere Zeit braucht deine Freigabe vor Mehrkosten.')
-    : t('Add your email or phone number to continue.', 'Füge deine E-Mail oder Telefonnummer hinzu, um fortzufahren.');
+  const priceNote = document.querySelector('#summary-price-note');
+  if (priceNote) {
+    priceNote.hidden = true;
+    priceNote.textContent = '';
+  }
+  const card = document.querySelector('#summary-qty-card');
+  if (card) {
+    card.hidden = false;
+    const unitEl = document.querySelector('#summary-unit-price');
+    const totalEl = document.querySelector('#summary-qty-total');
+    const labelEl = document.querySelector('#summary-qty-total-label');
+    const noteEl = document.querySelector('#summary-qty-note');
+    const summaryQty = document.querySelector('#summary-quantity');
+    if (unitEl) unitEl.textContent = `€${unitPrice.toFixed(2)}`;
+    if (totalEl) totalEl.textContent = `€${total.toFixed(2)}`;
+    if (labelEl) {
+      labelEl.textContent = quantity === 1
+        ? t('Total for 1 piece', 'Summe für 1 Stück')
+        : t(`Total for ${quantity} pieces`, `Summe für ${quantity} Stück`);
+    }
+    if (noteEl) {
+      noteEl.textContent = editingCost
+        ? t(
+          'Incl. 19% VAT · free shipping. First hour of file editing included; more time needs your approval.',
+          'Inkl. 19% MwSt. · kostenloser Versand. Erste Stunde Dateibearbeitung inklusive; mehr Zeit braucht deine Freigabe.'
+        )
+        : t('Incl. 19% VAT · free shipping', 'Inkl. 19% MwSt. · kostenloser Versand');
+    }
+    if (summaryQty && document.activeElement !== summaryQty) summaryQty.value = String(quantity);
+    if (summaryQty) {
+      summaryQty.readOnly = false;
+      summaryQty.disabled = false;
+    }
+    const dec = document.querySelector('#summary-qty-dec');
+    const inc = document.querySelector('#summary-qty-inc');
+    if (dec) dec.disabled = quantity <= 1;
+    if (inc) inc.disabled = false;
+  }
   if (status?.textContent === 'Updating production estimate…') status.textContent = '';
 }
 
@@ -273,10 +348,6 @@ async function refreshEstimate() {
     const quantity = Number(document.querySelector('#business-quantity')?.value);
     const status = document.querySelector('#request-status');
     if (!state.job || !Number.isInteger(quantity) || quantity < 1) return;
-    if (quantity !== 1 && quantity < 10) {
-      status.textContent = 'Production runs start at 10 pieces.';
-      return;
-    }
     status.textContent = 'Updating production estimate…';
     try {
       const updated = await updateBusinessQuote(state.job.jobId, {

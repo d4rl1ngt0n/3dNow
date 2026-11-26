@@ -1,50 +1,140 @@
 import { PRINTERS } from './printer.js';
-export const MATERIALS = { PLA: { densityGcm3: 1.24, ratePerCm3: .08 }, PETG: { densityGcm3: 1.27, ratePerCm3: .09 }, ABS: { densityGcm3: 1.04, ratePerCm3: .10 }, TPU: { densityGcm3: 1.21, ratePerCm3: .12 } };
 
+export const MATERIALS = {
+  PLA: { densityGcm3: 1.24, ratePerCm3: .08 },
+  PETG: { densityGcm3: 1.27, ratePerCm3: .09 },
+  ABS: { densityGcm3: 1.04, ratePerCm3: .10 },
+  TPU: { densityGcm3: 1.21, ratePerCm3: .12 }
+};
+
+/** Alfred / Objekt 1 defaults for business production costing. */
+export const BUSINESS_MACHINE_RATE_PER_HOUR = 0.3;
+export const BUSINESS_MATERIAL_EUR_PER_KG = 20;
+export const BUSINESS_LABOR_FLAT_EUR = 10;
+export const BUSINESS_SECURITY_MIN = 1.2;
+export const BUSINESS_SECURITY_MAX = 2;
+export const BUSINESS_VAT_RATE = 0.19;
+export const BUSINESS_SHIPPING_EUR = 0;
+const FALLBACK_PRINTER_Z_MM = 340;
+
+function money(value) {
+  return Number(Number(value).toFixed(2));
+}
+
+/**
+ * Alfred quantity markup on Eigenkosten.
+ * ≥100 → ×1.8 · ≥50 → ×2.5 · ≥20 → ×3.5 · &lt;20 → ×4
+ */
 export function businessQuantityMultiplier(quantity) {
-  if (!Number.isInteger(quantity) || quantity < 1) throw new Error('Business quantity must be at least one.');
-  // Single prototype: Ben rate × 8. Production runs start at 10 with Ben batch factors.
-  if (quantity === 1) return 8;
-  if (quantity < 10) {
-    throw new Error('Production runs start at 10 pieces. Use quantity 1 for a single prototype.');
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    throw new Error('Business quantity must be at least one.');
   }
-  // Ben: ×1.8 for 100+ · ×2.5 for 50+ · ×3 for 20+ · else ×4 (10–19)
   if (quantity >= 100) return 1.8;
   if (quantity >= 50) return 2.5;
-  if (quantity >= 20) return 3;
+  if (quantity >= 20) return 3.5;
   return 4;
 }
 
-export function businessQuote({ printTimeSec, printer, quantity, speed = 'standard', engineering = null }) {
-  if (!Number.isFinite(printTimeSec) || printTimeSec < 0 || !printer?.ratePerHour) return null;
-  const selected = PRINTERS[printer.id] || printer;
-  const printHours = Number((printTimeSec / 3600).toFixed(2));
+/**
+ * Security factor from model height vs printer build height.
+ * Small relative height → 1.2. Full printer height → 2.0.
+ */
+export function businessSecurityFactor(bboxMm, printer) {
+  const modelZ = Number(bboxMm?.z);
+  const printerZ = Number(printer?.volume?.z) || FALLBACK_PRINTER_Z_MM;
+  if (!Number.isFinite(modelZ) || modelZ <= 0 || !Number.isFinite(printerZ) || printerZ <= 0) {
+    return BUSINESS_SECURITY_MIN;
+  }
+  const ratio = Math.min(1, Math.max(0, modelZ / printerZ));
+  const factor = BUSINESS_SECURITY_MIN + (BUSINESS_SECURITY_MAX - BUSINESS_SECURITY_MIN) * ratio;
+  return Number(Math.min(BUSINESS_SECURITY_MAX, Math.max(BUSINESS_SECURITY_MIN, factor)).toFixed(4));
+}
+
+/**
+ * Business auto-quote from Alfred Objekt 1:
+ * material + machine(time+labor) with security, then quantity markup.
+ * Machine rate is always Pro €0.30/h.
+ * Customer-facing total includes 19% VAT; shipping is free (€0).
+ */
+export function businessQuote({
+  printTimeSec,
+  weightG,
+  bboxMm = null,
+  printer = null,
+  quantity,
+  speed = 'standard',
+  engineering = null,
+  materialEurPerKg = BUSINESS_MATERIAL_EUR_PER_KG,
+  laborFlatEur = BUSINESS_LABOR_FLAT_EUR,
+  securityFactor = null
+}) {
+  if (!Number.isFinite(printTimeSec) || printTimeSec < 0) return null;
+  if (!Number.isFinite(weightG) || weightG <= 0) return null;
+  if (!Number.isInteger(quantity) || quantity < 1) return null;
+
   let multiplier;
   try {
     multiplier = businessQuantityMultiplier(quantity);
   } catch {
     return null;
   }
-  const unitPrintCost = Number((printHours * selected.ratePerHour).toFixed(2));
-  const unitPrice = Number((unitPrintCost * multiplier).toFixed(2));
-  const productionTotal = Number((unitPrice * quantity).toFixed(2));
+
+  const selected = printer ? (PRINTERS[printer.id] || printer) : null;
+  const printHours = Number((printTimeSec / 3600).toFixed(2));
+  const security = Number.isFinite(securityFactor)
+    ? Number(Math.min(BUSINESS_SECURITY_MAX, Math.max(BUSINESS_SECURITY_MIN, securityFactor)).toFixed(4))
+    : businessSecurityFactor(bboxMm, selected);
+
+  const weightKgTotal = (weightG / 1000) * quantity;
+  const materialCost = money(materialEurPerKg * weightKgTotal * security);
+  const machineCost = money(security * (printHours * quantity * BUSINESS_MACHINE_RATE_PER_HOUR + laborFlatEur));
+  const eigenkosten = money(materialCost + machineCost);
+  const productionTotal = money(eigenkosten * multiplier);
+  const unitPriceNet = money(productionTotal / quantity);
+  const eigenkostenPerPiece = money(eigenkosten / quantity);
+
   const speedCost = speed === 'priority' ? 59 : speed === 'express' ? 39 : 0;
   const reviewCost = engineering === 'review' ? 35 : 0;
   const editingCost = engineering === 'editing' ? 89 : 0;
-  const total = Number((productionTotal + speedCost + reviewCost + editingCost).toFixed(2));
+  const netTotal = money(productionTotal + speedCost + reviewCost + editingCost);
+  const vatAmount = money(netTotal * BUSINESS_VAT_RATE);
+  const shippingCost = BUSINESS_SHIPPING_EUR;
+  const total = money(netTotal + vatAmount + shippingCost);
+  const unitPrice = money(total / quantity);
+
   return {
     currency: 'EUR',
     flow: 'business',
     mode: quantity === 1 ? 'prototype' : 'production',
     quantity,
     multiplier,
-    printer: { id: selected.id, name: selected.name, ratePerHour: selected.ratePerHour, printHours },
-    unitPrintCost,
+    securityFactor: security,
+    weightG,
+    materialEurPerKg,
+    laborFlatEur,
+    materialCost,
+    machineCost,
+    eigenkosten,
+    eigenkostenPerPiece,
+    printer: {
+      id: selected?.id || 'one-pro',
+      name: selected?.name || 'One Pro',
+      ratePerHour: BUSINESS_MACHINE_RATE_PER_HOUR,
+      printHours
+    },
+    unitPrintCost: money(printHours * BUSINESS_MACHINE_RATE_PER_HOUR),
+    unitPriceNet,
     unitPrice,
     productionTotal,
     speedCost,
     reviewCost,
     editingCost,
+    netTotal,
+    vatRate: BUSINESS_VAT_RATE,
+    vatAmount,
+    shippingCost,
+    freeShipping: true,
+    vatInclusive: true,
     total,
     totalFormatted: `${total.toFixed(2).replace('.', ',')} €`
   };

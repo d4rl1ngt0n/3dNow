@@ -58,6 +58,37 @@ deadlineInput?.addEventListener('change', () => {
   }
 });
 
+const startedInput = $('#idea-started');
+if (startedInput && !startedInput.value) startedInput.value = String(Date.now());
+
+let turnstileWidgetId = null;
+
+async function loadTurnstile() {
+  const slot = $('#idea-turnstile');
+  if (!slot) return;
+  try {
+    const response = await fetch('/api/submissions/guard');
+    const payload = await response.json().catch(() => ({}));
+    const siteKey = payload.turnstileSiteKey;
+    if (!siteKey) return;
+    slot.hidden = false;
+    await new Promise((resolve, reject) => {
+      if (window.turnstile) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.append(script);
+    });
+    turnstileWidgetId = window.turnstile.render(slot, { sitekey: siteKey });
+  } catch {
+    slot.hidden = true;
+  }
+}
+
+loadTurnstile();
+
 function setLang(lang) {
   const next = persistLang(lang);
   applyLangAttributes(next);
@@ -198,6 +229,12 @@ form?.addEventListener('submit', async (event) => {
     body.append('quantity', String(quantity));
     if (deadline) body.append('deadline', deadline);
     if (file) body.append('reference', file, file.name);
+    body.append('website', $('#idea-website')?.value || '');
+    body.append('startedAt', startedInput?.value || String(Date.now()));
+    const turnstileToken = window.turnstile && turnstileWidgetId != null
+      ? window.turnstile.getResponse(turnstileWidgetId)
+      : '';
+    if (turnstileToken) body.append('turnstileToken', turnstileToken);
 
     const response = await fetch('/api/submissions/idea', { method: 'POST', body });
     const payload = await response.json().catch(() => ({}));
@@ -207,6 +244,8 @@ form?.addEventListener('submit', async (event) => {
 
     form.reset();
     if (quantityInput) quantityInput.value = '1';
+    if (startedInput) startedInput.value = String(Date.now());
+    if (window.turnstile && turnstileWidgetId != null) window.turnstile.reset(turnstileWidgetId);
     applyDeadlineMin();
     updateFileLabel();
     const ref = payload.orderNumber ? String(payload.orderNumber).toUpperCase() : '';

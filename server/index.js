@@ -14,6 +14,7 @@ import { loadRuntimeSettings } from './services/runtime-settings.js';
 await ensureStorage();
 await loadRuntimeSettings();
 const app = express();
+app.set('trust proxy', 1);
 const dist = path.join(config.root, 'dist');
 const marketingSite = path.join(config.root, '3dnow_20.html');
 const quoteEngine = path.join(dist, 'index.html');
@@ -43,6 +44,9 @@ app.use((req, res, next) => {
     "frame-ancestors 'self' https://3d-now.de https://www.3d-now.de https://*.myshopify.com https://admin.shopify.com"
   );
   res.removeHeader('X-Frame-Options');
+  // anfrage.* is a tool, not a content site: keep it out of search results so it
+  // doesn't compete with the landing pages on 3d-now.de (they link here instead).
+  res.setHeader('X-Robots-Tag', 'noindex');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -92,6 +96,11 @@ app.get('/brand-logo', async (_, res) => {
   } catch {
     res.status(404).end();
   }
+});
+// Crawling stays allowed so search engines can see the noindex header above;
+// blocking everything here would stop them from ever reading it.
+app.get('/robots.txt', (_, res) => {
+  res.type('text/plain').send('User-agent: *\nDisallow: /admin\nDisallow: /api/\n');
 });
 app.use('/api/jobs', jobsRouter);
 app.use('/api/submissions', submissionsRouter);

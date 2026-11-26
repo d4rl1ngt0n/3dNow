@@ -7,9 +7,17 @@ import {
   registerIdeaSubmission,
   registerLegacyOrderSubmission
 } from '../services/orders.js';
+import { guardSubmission, silentAccept, turnstileSiteKey, turnstileConfigured } from '../services/form-guard.js';
 
 const upload = multer({ dest: config.submissions, limits: { fileSize: config.uploadLimit } });
 export const submissionsRouter = Router();
+
+submissionsRouter.get('/guard', (_req, res) => {
+  res.json({
+    turnstileSiteKey: turnstileSiteKey(),
+    turnstileRequired: turnstileConfigured()
+  });
+});
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const text = value => String(value || '').trim();
@@ -26,6 +34,10 @@ async function notify(res, payload, orderNumber = null) {
 }
 
 submissionsRouter.post('/contact', async (req, res) => {
+  const guard = await guardSubmission(req);
+  if (guard.silent) return silentAccept(res);
+  if (guard.blocked) return res.status(guard.status).json({ error: guard.error });
+
   const name = text(req.body?.name);
   const email = text(req.body?.email);
   const message = text(req.body?.message);
@@ -75,12 +87,16 @@ submissionsRouter.post('/contact', async (req, res) => {
 });
 
 submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => {
+  const guard = await guardSubmission(req);
+  if (guard.silent) return silentAccept(res);
+  if (guard.blocked) return res.status(guard.status).json({ error: guard.error });
+
   const name = text(req.body?.name);
   const email = text(req.body?.email);
   const description = text(req.body?.description);
   const phone = text(req.body?.phone);
   const deadline = text(req.body?.deadline);
-  const quantity = Number(req.body?.quantity);
+  const quantity = Number(req.body?.quantity || 1);
   if (!name || !validEmail(email) || !description) {
     return res.status(400).json({ error: 'Name, a valid email address, and a description are required.' });
   }
@@ -147,6 +163,10 @@ submissionsRouter.post('/idea', upload.single('reference'), async (req, res) => 
 });
 
 submissionsRouter.post('/orders', upload.fields([{ name: 'model', maxCount: 1 }, { name: 'studentId', maxCount: 1 }]), async (req, res) => {
+  const guard = await guardSubmission(req, { requireTurnstile: false });
+  if (guard.silent) return silentAccept(res);
+  if (guard.blocked) return res.status(guard.status).json({ error: guard.error });
+
   const flow = text(req.body?.flow);
   const contactEmail = text(req.body?.contactEmail);
   const contactPhone = text(req.body?.contactPhone);

@@ -16,6 +16,7 @@ import { sendAdminEmail, sendCustomerBusinessQuoteConfirmation, sendCustomerPriv
 import { createShopifyCheckout } from '../services/shopify-checkout.js';
 import { isEligibleStudentEmail } from '../services/student-email.js';
 import { registerBusinessQuote, registerCheckoutPending, registerPrivateQuote } from '../services/orders.js';
+import { clientIp, rateLimited } from '../services/form-guard.js';
 
 const upload = multer({ dest: config.uploads, limits: { fileSize: config.uploadLimit } });
 const orderUpload = multer({ dest: config.submissions, limits: { fileSize: config.uploadLimit } });
@@ -64,6 +65,19 @@ function publicJob(job) {
   };
 }
 
+function buildBusinessQuote(job, overrides = {}) {
+  const opts = { ...(job.businessOptions || {}), ...overrides };
+  return businessQuote({
+    printTimeSec: job.metrics?.printTimeSec,
+    weightG: job.metrics?.weightG,
+    bboxMm: job.metrics?.bboxMm,
+    printer: job.metrics?.printer,
+    quantity: overrides.quantity ?? job.quantity,
+    speed: opts.speed || 'standard',
+    engineering: opts.engineering || null
+  });
+}
+
 function applyGeometry(job, geometry) {
   if (!geometry) return;
   const metrics = job.metrics;
@@ -93,7 +107,7 @@ function applyGcode(job, parsed, source) {
 
   if (parsed.confidence === 'header' && routed) {
     if (job.flow === 'business') {
-      job.quote = businessQuote({ printTimeSec: metrics.printTimeSec, printer: routed, quantity: job.quantity });
+      job.quote = buildBusinessQuote(job);
     } else if (job.flow === 'private') {
       job.quote = null;
     } else {
@@ -137,7 +151,7 @@ async function sliceAndQuote(job, route) {
     job.status = job.metrics.printTimeSec != null || job.metrics.weightG != null ? 'ready' : 'manual-review';
   } else if (job.metrics.printer && job.metrics.printTimeSec != null) {
     job.quote = job.flow === 'business'
-      ? businessQuote({ printTimeSec: job.metrics.printTimeSec, printer: job.metrics.printer, quantity: job.quantity })
+      ? buildBusinessQuote(job)
       : job.metrics.weightG != null
         ? studentQuote({
           material: job.material,
@@ -269,10 +283,6 @@ jobsRouter.post('/', upload.single('file'), async (req, res) => {
   if (!Number.isInteger(quantity) || quantity < 1) {
     await fs.unlink(req.file.path).catch(() => {});
     return res.status(400).json({ error: 'Business quantity must be at least one.' });
-  }
-  if (flow === 'business' && quantity !== 1 && quantity < 10) {
-    await fs.unlink(req.file.path).catch(() => {});
-    return res.status(400).json({ error: 'Production runs start at 10 pieces. Use quantity 1 for a single prototype.' });
   }
   const normalized = normalizeSliceSettings({
     nozzleDiameterMm: req.body.nozzleDiameterMm ?? req.body.nozzle,
@@ -415,15 +425,12 @@ jobsRouter.post('/:jobId/business-quote', (req, res) => {
   if (!Number.isInteger(quantity) || quantity < 1) {
     return res.status(400).json({ error: 'Enter a quantity of at least one.' });
   }
-  if (quantity !== 1 && quantity < 10) {
-    return res.status(400).json({ error: 'Production runs start at 10 pieces. Use quantity 1 for a single prototype.' });
-  }
-  if (!job.metrics.printTimeSec || !job.metrics.printer) {
-    return res.status(409).json({ error: 'Verified print time and printer details are required for a business estimate.' });
+  if (!job.metrics.printTimeSec || !job.metrics.weightG || !job.metrics.printer) {
+    return res.status(409).json({ error: 'Verified weight, print time and printer details are required for a business estimate.' });
   }
   job.quantity = quantity;
   job.businessOptions = { speed, engineering };
-  job.quote = businessQuote({ printTimeSec: job.metrics.printTimeSec, printer: job.metrics.printer, quantity, speed, engineering });
+  job.quote = buildBusinessQuote(job, { quantity, speed, engineering });
   if (!job.quote) {
     return res.status(400).json({ error: 'Could not build a production estimate for that quantity.' });
   }
@@ -431,18 +438,24 @@ jobsRouter.post('/:jobId/business-quote', (req, res) => {
 });
 
 jobsRouter.post('/:jobId/business-quote-request', async (req, res) => {
+  if (rateLimited(clientIp(req))) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a few minutes and try again.' });
+  }
   const job = jobStore.get(req.params.jobId);
   const details = req.body || {};
   const contactMethod = details.contactMethod === 'phone' ? 'phone' : 'email';
   const contact = contactMethod === 'phone' ? String(details.contactPhone || '').trim() : String(details.contactEmail || '').trim();
   if (!job) return res.status(404).json({ error: 'Job not found' });
-  if (job.flow !== 'business' || !job.metrics.printTimeSec || !job.metrics.printer) {
+  if (job.flow !== 'business' || !job.metrics.printTimeSec || !job.metrics.weightG || !job.metrics.printer) {
     return res.status(409).json({ error: 'A verified business estimate is required before requesting a quote.' });
   }
   const speed = ['standard', 'priority', 'express'].includes(details.speed) ? details.speed : 'standard';
   const engineering = ['review', 'editing'].includes(details.engineering) ? details.engineering : null;
   job.businessOptions = { speed, engineering };
-  job.quote = businessQuote({ printTimeSec: job.metrics.printTimeSec, printer: job.metrics.printer, quantity: job.quantity, speed, engineering });
+  job.quote = buildBusinessQuote(job, { speed, engineering });
+  if (!job.quote) {
+    return res.status(409).json({ error: 'A verified business estimate is required before requesting a quote.' });
+  }
   if (!contact) return res.status(400).json({ error: 'Add your preferred contact details.' });
   if (contactMethod === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) {
     return res.status(400).json({ error: 'Enter a valid contact email address.' });
@@ -468,16 +481,25 @@ jobsRouter.post('/:jobId/business-quote-request', async (req, res) => {
         `Order number: ${job.id}`,
         `File: ${job.filename}`,
         `Quantity: ${job.quote.quantity}`,
-        `Printer: ${job.quote.printer.name}`,
+        `Weight per part: ${job.quote.weightG} g`,
         `Print time per part: ${job.quote.printer.printHours} hours`,
-        `Printer rate: €${job.quote.printer.ratePerHour}/hour`,
+        `Machine rate: €${job.quote.printer.ratePerHour}/hour`,
+        `Material: €${job.quote.materialEurPerKg}/kg`,
+        `Security factor: ${job.quote.securityFactor}`,
+        `Material cost: €${job.quote.materialCost.toFixed(2)}`,
+        `Machine cost: €${job.quote.machineCost.toFixed(2)}`,
+        `Internal cost (Eigenkosten): €${job.quote.eigenkosten.toFixed(2)}`,
         `Quantity multiplier: ×${job.quote.multiplier}`,
-        `Estimated unit price: €${job.quote.unitPrice.toFixed(2)}`,
-        `Production subtotal: €${job.quote.productionTotal.toFixed(2)}`,
+        `Net unit price: €${(job.quote.unitPriceNet ?? job.quote.unitPrice).toFixed(2)}`,
+        `Production subtotal (net): €${job.quote.productionTotal.toFixed(2)}`,
         `Priority or express cost: €${job.quote.speedCost.toFixed(2)}`,
         `Expert review cost: €${job.quote.reviewCost.toFixed(2)}`,
         `File editing first hour: €${job.quote.editingCost.toFixed(2)}`,
-        `Estimated production price: ${job.quote.totalFormatted}`,
+        `Net total: €${(job.quote.netTotal ?? job.quote.total).toFixed(2)}`,
+        `VAT 19%: €${(job.quote.vatAmount ?? 0).toFixed(2)}`,
+        `Shipping: free`,
+        `Customer total (VAT incl., free shipping): ${job.quote.totalFormatted}`,
+        `Gross unit price: €${job.quote.unitPrice.toFixed(2)}`,
         `Material: ${job.requestedMaterial || job.material}`,
         `Colour: ${job.businessQuoteRequest.color}`,
         `Production speed: ${job.businessQuoteRequest.speed}`,
@@ -506,6 +528,9 @@ jobsRouter.post('/:jobId/business-quote-request', async (req, res) => {
 });
 
 jobsRouter.post('/:jobId/private-quote-request', async (req, res) => {
+  if (rateLimited(clientIp(req))) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a few minutes and try again.' });
+  }
   const job = jobStore.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job not found' });
 

@@ -31,11 +31,11 @@
           <a class="navlink" href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
           <a class="navlink" href="https://3d-now.de/pages/faq">FAQ</a>
         </div>
+        <a class="signin" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
         <div class="langswitch" role="group" aria-label="Language">
           <button type="button" data-lang="de" class="active" aria-pressed="true">DE</button>
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
-        <a class="signin" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
         <button class="hamburger" id="hamburger" type="button" data-en-aria="Open navigation menu" data-de-aria="Menü öffnen" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobile-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       </nav>
     </div>
@@ -56,6 +56,13 @@
     <a class="navlink" href="https://3d-now.de/#reviews" data-en="Reviews" data-de="Bewertungen">Bewertungen</a>
     <a class="navlink" href="https://3d-now.de/pages/faq">FAQ</a>
     <a class="navlink" href="https://3d-now.de/pages/contact" data-en="Contact" data-de="Kontakt">Kontakt</a>
+    <div class="mobile-lang-row">
+      <span class="eyebrow muted" data-en="Language" data-de="Sprache">Sprache</span>
+      <div class="langswitch" role="group" aria-label="Language">
+        <button type="button" data-lang="de" class="active" aria-pressed="true">DE</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
   </nav>
   <main>
     <section class="intro" id="quote-engine">
@@ -128,6 +135,26 @@
         <p class="eyebrow" data-en="Your result" data-de="Dein Ergebnis">Dein Ergebnis</p>
         <h3 id="order-summary-heading" class="summary-total"><span id="summary-total">€39.00</span></h3>
         <p class="summary-subtitle" id="summary-subtitle" data-en="Upload a file to verify your package." data-de="Lade eine Datei hoch, um dein Paket zu prüfen.">Lade eine Datei hoch, um dein Paket zu prüfen.</p>
+        <p class="summary-price-note" id="summary-price-note" hidden></p>
+        <div class="summary-qty-card" id="summary-qty-card" hidden>
+          <div class="summary-qty-row">
+            <span data-en="Price per piece" data-de="Preis pro Stück">Preis pro Stück</span>
+            <strong id="summary-unit-price">—</strong>
+          </div>
+          <div class="summary-qty-row summary-qty-control">
+            <label for="summary-quantity" data-en="Number of prints" data-de="Anzahl Drucke">Anzahl Drucke</label>
+            <div class="summary-qty-stepper">
+              <button type="button" id="summary-qty-dec" aria-label="Decrease quantity" data-en-aria="Decrease quantity" data-de-aria="Stückzahl verringern">−</button>
+              <input id="summary-quantity" type="number" min="1" value="1" inputmode="numeric" aria-label="Number of prints">
+              <button type="button" id="summary-qty-inc" aria-label="Increase quantity" data-en-aria="Increase quantity" data-de-aria="Stückzahl erhöhen">+</button>
+            </div>
+          </div>
+          <div class="summary-qty-row summary-qty-total">
+            <span id="summary-qty-total-label" data-en="Total for 1 piece" data-de="Summe für 1 Stück">Summe für 1 Stück</span>
+            <strong id="summary-qty-total">—</strong>
+          </div>
+          <p class="summary-qty-note" id="summary-qty-note" data-en="Incl. 19% VAT · free shipping" data-de="Inkl. 19% MwSt. · kostenloser Versand">Inkl. 19% MwSt. · kostenloser Versand</p>
+        </div>
         <dl class="summary-lines"><div><dt data-en="File" data-de="Datei">Datei</dt><dd id="summary-file" data-en="Not uploaded" data-de="Nicht hochgeladen">Nicht hochgeladen</dd></div><div><dt data-en="Weight" data-de="Gewicht">Gewicht</dt><dd id="summary-weight" data-en="Pending" data-de="Ausstehend">Ausstehend</dd></div><div><dt data-en="Package" data-de="Paket">Paket</dt><dd id="summary-package">Basic</dd></div><div><dt data-en="Material" data-de="Material">Material</dt><dd id="summary-material">PLA</dd></div><div><dt data-en="Speed" data-de="Tempo">Tempo</dt><dd id="summary-speed" data-en="Standard · 8-10 days" data-de="Standard · 8–10 Tage">Standard · 8–10 Tage</dd></div><div><dt data-en="Engineering" data-de="Engineering">Engineering</dt><dd id="summary-engineering" data-en="Not selected" data-de="Nicht gewählt">Nicht gewählt</dd></div></dl>
         <button class="summary-checkout" id="summary-checkout" type="button" data-en="Continue to payment" data-de="Weiter zur Zahlung">Weiter zur Zahlung</button>
         <button class="request-submit summary-checkout-alt" id="submit-request" type="button" hidden data-en="Continue to secure payment" data-de="Weiter zur sicheren Zahlung">Weiter zur sicheren Zahlung</button>

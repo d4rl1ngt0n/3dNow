@@ -13,3 +13,27 @@ server/data/*
 .DS_Store
 outputs/
 work/
+
+# --- added 2026-11-26 (move to Linux/Mac): secrets + local junk ---
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+CREDENTIALS.md
+**/session-secret*
+upload-worker-secrets.mjs
+.mcp.json
+.claude/settings.local.json
+.next/
+.venv/
+venv/
+__pycache__/
+.pnpm-store/
+.playwright-mcp/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__MACOSX/
+.~lock.*
+Thumbs.db
